@@ -1,0 +1,336 @@
+@page "/crud/associations"
+@inject FuelApiClient ApiClient
+@inject NavigationManager NavigationManager
+
+@using System.ComponentModel.DataAnnotations
+@using FuelWebUi.ApiClient.Models
+
+<h1>Associations</h1>
+
+@if (!string.IsNullOrWhiteSpace(SuccessMessage))
+{
+    <div class="alert alert-success">@SuccessMessage</div>
+}
+
+@if (!string.IsNullOrWhiteSpace(ErrorMessage))
+{
+    <div class="alert alert-danger">@ErrorMessage</div>
+}
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div></div>
+            <button class="btn btn-primary" @onclick="ShowAddForm">
+                <span class="bi bi-plus-circle me-1"></span> Add Association
+            </button>
+        </div>
+
+        @if (IsLoading)
+        {
+            <p>Loading...</p>
+        }
+        else if (AssociationItems.Count == 0)
+        {
+            <p>No associations found.</p>
+        }
+        else
+        {
+            <div class="mb-3 d-flex justify-content-between align-items-center">
+                <div>
+                    Showing @((CurrentPage - 1) * PageSize + 1) - @Math.Min(CurrentPage * PageSize, TotalCount) of @TotalCount associations
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-sm btn-outline-primary" @onclick="PreviousPage" disabled="@(CurrentPage == 1)">
+                        <span class="bi bi-chevron-left"></span> Previous
+                    </button>
+                    <button class="btn btn-sm btn-outline-primary" disabled>
+                        Page @CurrentPage of @TotalPages
+                    </button>
+                    <button class="btn btn-sm btn-outline-primary" @onclick="NextPage" disabled="@(CurrentPage >= TotalPages)">
+                        Next <span class="bi bi-chevron-right"></span>
+                    </button>
+                </div>
+            </div>
+
+            <table class="table table-striped table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Teams</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var association in AssociationItems)
+                    {
+                        <tr style="cursor: pointer;" @onclick="() => ShowEditForm(association)">
+                            <td>@association.Name</td>
+                            <td>@association.TeamCount</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+
+    @if (ShowForm)
+    {
+        <div class="col-lg-4" id="edit-form" style="position:sticky;top:20px;height:fit-content;">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="card-title mb-0">@(IsEditMode ? "Edit Association" : "Add Association")</h5>
+                        <button type="button" class="btn-close" @onclick="HideForm"></button>
+                    </div>
+
+                    <EditForm Model="NewAssociation" OnValidSubmit="SaveAssociationAsync">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+
+                        <div class="mb-3">
+                            <label class="form-label">Name</label>
+                            <InputText class="form-control" @bind-Value="NewAssociation.Name" />
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-primary" type="submit" disabled="@IsSaving">
+                                @(IsSaving ? "Saving..." : IsEditMode ? "Update Association" : "Add Association")
+                            </button>
+                            <button class="btn btn-secondary" type="button" @onclick="HideForm">
+                                Cancel
+                            </button>
+                            @if (IsEditMode)
+                            {
+                                <button class="btn btn-danger ms-auto" type="button" @onclick="DeleteCurrentAssociationAsync">
+                                    Delete
+                                </button>
+                            }
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<ConfirmDialog @ref="confirmDialog" Title="Delete Association" ConfirmText="Delete" />
+
+@code {
+    private ConfirmDialog confirmDialog = default!;
+    private List<AssociationListDto> AssociationItems { get; set; } = new();
+    private AssociationFormModel NewAssociation { get; set; } = new();
+    private bool IsLoading { get; set; } = true;
+    private bool IsSaving { get; set; }
+    private bool ShowForm { get; set; }
+    private bool IsEditMode { get; set; }
+    private int? EditingAssociationId { get; set; }
+    private string? ErrorMessage { get; set; }
+    private string? SuccessMessage { get; set; }
+
+    // Pagination properties
+    private int CurrentPage { get; set; } = 1;
+    private int PageSize { get; set; } = 30;
+    private int TotalCount { get; set; }
+    private int TotalPages => TotalCount > 0 ? (int)Math.Ceiling(TotalCount / (double)PageSize) : 1;
+
+    private bool IsPageLoading { get; set; } = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAssociationsAsync();
+    }
+
+    private async Task LoadAssociationsAsync()
+    {
+        try
+        {
+            ErrorMessage = null;
+            var response = await ApiClient.Api.Association.GetAsync(config =>
+            {
+                config.QueryParameters.SortBy = "name";
+                config.QueryParameters.SortDir = "asc";
+                config.QueryParameters.Page = CurrentPage;
+                config.QueryParameters.PageSize = PageSize;
+            });
+            AssociationItems = response?.Items ?? new List<AssociationListDto>();
+            TotalCount = response?.TotalCount ?? 0;
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Failed to load associations: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task NextPage()
+    {
+        if (CurrentPage < TotalPages && !IsPageLoading)
+        {
+            IsPageLoading = true;
+            CurrentPage++;
+            await LoadAssociationsAsync();
+            IsPageLoading = false;
+        }
+    }
+
+    private async Task PreviousPage()
+    {
+        if (CurrentPage > 1 && !IsPageLoading)
+        {
+            IsPageLoading = true;
+            CurrentPage--;
+            await LoadAssociationsAsync();
+            IsPageLoading = false;
+        }
+    }
+
+    private void ShowAddForm()
+    {
+        IsEditMode = false;
+        EditingAssociationId = null;
+        NewAssociation = new AssociationFormModel();
+        ShowForm = true;
+        ErrorMessage = null;
+        SuccessMessage = null;
+    }
+
+    private void ShowEditForm(AssociationListDto association)
+    {
+        IsEditMode = true;
+        EditingAssociationId = association.AssociationId;
+        NewAssociation = new AssociationFormModel
+        {
+            Name = association.Name ?? string.Empty
+        };
+        ShowForm = true;
+        ErrorMessage = null;
+        SuccessMessage = null;
+    }
+
+    private void HideForm()
+    {
+        ShowForm = false;
+        IsEditMode = false;
+        EditingAssociationId = null;
+        NewAssociation = new AssociationFormModel();
+    }
+
+    private async Task SaveAssociationAsync()
+    {
+        if (IsEditMode)
+        {
+            await UpdateAssociationAsync();
+        }
+        else
+        {
+            await AddAssociationAsync();
+        }
+    }
+
+    private async Task AddAssociationAsync()
+    {
+        IsSaving = true;
+        ErrorMessage = null;
+        SuccessMessage = null;
+
+        try
+        {
+            var request = new Association
+            {
+                Name = NewAssociation.Name?.Trim()
+            };
+
+            await ApiClient.Api.Association.PostAsync(request);
+            SuccessMessage = "Association added successfully.";
+            HideForm();
+            await LoadAssociationsAsync();
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Failed to add association: {ex.Message}";
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+
+    private async Task UpdateAssociationAsync()
+    {
+        if (!EditingAssociationId.HasValue)
+        {
+            ErrorMessage = "Cannot update association without a valid ID.";
+            return;
+        }
+
+        IsSaving = true;
+        ErrorMessage = null;
+        SuccessMessage = null;
+
+        try
+        {
+            var request = new Association
+            {
+                AssociationID = EditingAssociationId.Value,
+                Name = NewAssociation.Name?.Trim()
+            };
+
+            await ApiClient.Api.Association[EditingAssociationId.Value].PutAsync(request);
+            SuccessMessage = "Association updated successfully.";
+            HideForm();
+            await LoadAssociationsAsync();
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Failed to update association: {ex.Message}";
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+
+    private async Task DeleteCurrentAssociationAsync()
+    {
+        if (!EditingAssociationId.HasValue)
+        {
+            ErrorMessage = "Cannot delete association without a valid ID.";
+            return;
+        }
+
+        var association = AssociationItems.FirstOrDefault(a => a.AssociationId == EditingAssociationId.Value);
+        if (association == null)
+        {
+            ErrorMessage = "Association not found.";
+            return;
+        }
+
+        var confirmed = await confirmDialog.ShowAsync($"Delete {association.Name}?\nThis action cannot be undone.");
+
+        if (!confirmed)
+        {
+            return;
+        }
+
+        try
+        {
+            await ApiClient.Api.Association[EditingAssociationId.Value].DeleteAsync();
+            await LoadAssociationsAsync();
+            SuccessMessage = "Association deleted successfully.";
+            HideForm();
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Failed to delete association: {ex.Message}";
+        }
+    }
+
+    private sealed class AssociationFormModel
+    {
+        [Required]
+        public string Name { get; set; } = string.Empty;
+    }
+}

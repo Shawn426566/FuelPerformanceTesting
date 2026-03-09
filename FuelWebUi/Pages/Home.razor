@@ -1,0 +1,34 @@
+﻿@page "/"
+@inject NavigationManager NavigationManager
+
+@*
+TODO: Replace this temporary redirect when authentication is added.
+Suggested role-based routing:
+- Admin -> /crud
+- Evaluator -> /evaluator/view
+- Coach -> /coach/team
+- Player -> /player/profile
+
+Template:
+protected override async Task OnInitializedAsync()
+{
+    var role = await AuthService.GetPrimaryRoleAsync();
+    var route = role switch
+    {
+        "Admin" => "/crud",
+        "Evaluator" => "/evaluator/view",
+        "Coach" => "/coach/team",
+        "Player" => "/player/profile",
+        _ => "/crud"
+    };
+
+    NavigationManager.NavigateTo(route, replace: true);
+}
+*@
+
+@code {
+    protected override void OnInitialized()
+    {
+        NavigationManager.NavigateTo("/crud", replace: true);
+    }
+}

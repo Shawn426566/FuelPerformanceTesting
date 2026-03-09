@@ -1,0 +1,45 @@
+﻿<div class="top-row ps-3 navbar navbar-dark">
+    <div>
+        <span class="bi bi-fuel-pump-fill" aria-hidden="true"></span>
+        <a class="navbar-brand" href="">FUEL MTRX</a>
+    </div>
+    <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+</div>
+
+<div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
+    <nav class="nav flex-column">
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="crud">
+                <span class="bi bi-chevron-right" aria-hidden="true"></span> CRUD
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="player/profile">
+                <span class="bi bi-chevron-right" aria-hidden="true"></span> Player View
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="coach/team">
+                <span class="bi bi-chevron-right" aria-hidden="true"></span> Coach View
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="evaluator/view">
+                <span class="bi bi-chevron-right" aria-hidden="true"></span> Evaluator View
+            </NavLink>
+        </div>
+    </nav>
+</div>
+
+@code {
+    private bool collapseNavMenu = true;
+
+    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+}

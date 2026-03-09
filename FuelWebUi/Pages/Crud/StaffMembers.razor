@@ -1,0 +1,432 @@
+@page "/crud/staff-members"
+@inject FuelApiClient ApiClient
+@inject NavigationManager NavigationManager
+
+@using System.ComponentModel.DataAnnotations
+@using FuelWebUi.ApiClient.Models
+
+<h1>Staff Members</h1>
+
+@if (!string.IsNullOrWhiteSpace(SuccessMessage))
+{
+    <div class="alert alert-success">@SuccessMessage</div>
+}
+
+@if (!string.IsNullOrWhiteSpace(ErrorMessage))
+{
+    <div class="alert alert-danger">@ErrorMessage</div>
+}
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div></div>
+            <button class="btn btn-primary" @onclick="ShowAddForm">
+                <span class="bi bi-plus-circle me-1"></span> Add Staff Member
+            </button>
+        </div>
+
+        @if (IsLoading)
+        {
+            <p>Loading...</p>
+        }
+        else if (StaffMemberItems.Count == 0)
+        {
+            <p>No staff members found.</p>
+        }
+        else
+        {
+            <div class="mb-3 d-flex justify-content-between align-items-center">
+                <div>
+                    Showing @((CurrentPage - 1) * PageSize + 1) - @Math.Min(CurrentPage * PageSize, TotalCount) of @TotalCount staff members
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-sm btn-outline-primary" @onclick="PreviousPage" disabled="@(CurrentPage == 1)">
+                        <span class="bi bi-chevron-left"></span> Previous
+                    </button>
+                    <button class="btn btn-sm btn-outline-primary" disabled>
+                        Page @CurrentPage of @TotalPages
+                    </button>
+                    <button class="btn btn-sm btn-outline-primary" @onclick="NextPage" disabled="@(CurrentPage >= TotalPages)">
+                        Next <span class="bi bi-chevron-right"></span>
+                    </button>
+                </div>
+            </div>
+
+            <table class="table table-striped table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Role</th>
+                        <th>Email</th>
+                        <th>Team</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var member in StaffMemberItems)
+                    {
+                        <tr style="cursor: pointer;" @onclick="() => ShowEditForm(member)">
+                            <td>@member.FirstName @member.LastName</td>
+                            <td>@member.Role</td>
+                            <td>@member.Email</td>
+                            <td>@(member.TeamName ?? "—")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+
+    @if (ShowForm)
+    {
+        <div class="col-lg-4" id="edit-form" style="position:sticky;top:20px;height:fit-content;">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="card-title mb-0">@(IsEditMode ? "Edit Staff Member" : "Add Staff Member")</h5>
+                        <button type="button" class="btn-close" @onclick="HideForm"></button>
+                    </div>
+
+                    <EditForm Model="NewStaffMember" OnValidSubmit="SaveStaffMemberAsync">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+
+                        <div class="mb-3">
+                            <label class="form-label">First Name</label>
+                            <InputText class="form-control" @bind-Value="NewStaffMember.FirstName" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Last Name</label>
+                            <InputText class="form-control" @bind-Value="NewStaffMember.LastName" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <InputText class="form-control" @bind-Value="NewStaffMember.Email" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Role</label>
+                            <InputSelect class="form-select" @bind-Value="NewStaffMember.Role">
+                                <option value="">Select role</option>
+                                @foreach (var role in Enum.GetValues<StaffRole>())
+                                {
+                                    <option value="@role">@role</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Team</label>
+                            <InputSelect class="form-select" @bind-Value="NewStaffMember.TeamID">
+                                <option value="">No team assigned</option>
+                                @foreach (var team in Teams)
+                                {
+                                    <option value="@team.TeamId">@team.Name</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-primary" type="submit" disabled="@IsSaving">
+                                @(IsSaving ? "Saving..." : IsEditMode ? "Update Staff Member" : "Add Staff Member")
+                            </button>
+                            <button class="btn btn-secondary" type="button" @onclick="HideForm">
+                                Cancel
+                            </button>
+                            @if (IsEditMode)
+                            {
+                                <button class="btn btn-danger ms-auto" type="button" @onclick="DeleteCurrentStaffMemberAsync">
+                                    Delete
+                                </button>
+                            }
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<ConfirmDialog @ref="confirmDialog" Title="Delete Staff Member" ConfirmText="Delete" />
+
+@code {
+    private ConfirmDialog confirmDialog = default!;
+    private List<StaffMemberListDto> StaffMemberItems { get; set; } = new();
+    private List<TeamListDto> Teams { get; set; } = new();
+    private StaffMemberFormModel NewStaffMember { get; set; } = new();
+    private bool IsLoading { get; set; } = true;
+    private bool IsSaving { get; set; }
+    private bool ShowForm { get; set; }
+    private bool IsEditMode { get; set; }
+    private int? EditingStaffMemberId { get; set; }
+    private string? ErrorMessage { get; set; }
+    private string? SuccessMessage { get; set; }
+
+    // Pagination properties
+    private int CurrentPage { get; set; } = 1;
+    private int PageSize { get; set; } = 30;
+    private int TotalCount { get; set; }
+    private int TotalPages => TotalCount > 0 ? (int)Math.Ceiling(TotalCount / (double)PageSize) : 1;
+    private bool IsPageLoading { get; set; } = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        try
+        {
+            ErrorMessage = null;
+            var staffTask = ApiClient.Api.StaffMembers.GetAsync(config =>
+            {
+                config.QueryParameters.SortBy = "lastName";
+                config.QueryParameters.SortDir = "asc";
+                config.QueryParameters.Page = CurrentPage;
+                config.QueryParameters.PageSize = PageSize;
+            });
+            var teamsTask = ApiClient.Api.Teams.GetAsync(config =>
+            {
+                config.QueryParameters.Page = 1;
+                config.QueryParameters.PageSize = 1000;
+            });
+
+            await Task.WhenAll(staffTask, teamsTask);
+
+            var staffResult = await staffTask;
+            var teamsResult = await teamsTask;
+            StaffMemberItems = staffResult?.Items ?? new List<StaffMemberListDto>();
+            TotalCount = staffResult?.TotalCount ?? 0;
+            Teams = teamsResult?.Items ?? new List<TeamListDto>();
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Failed to load data: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task LoadStaffMembersAsync()
+    {
+        try
+        {
+            ErrorMessage = null;
+            var response = await ApiClient.Api.StaffMembers.GetAsync(config =>
+            {
+                config.QueryParameters.SortBy = "lastName";
+                config.QueryParameters.SortDir = "asc";
+                config.QueryParameters.Page = CurrentPage;
+                config.QueryParameters.PageSize = PageSize;
+            });
+            StaffMemberItems = response?.Items ?? new List<StaffMemberListDto>();
+            TotalCount = response?.TotalCount ?? 0;
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Failed to load staff members: {ex.Message}";
+        }
+    }
+
+    private async Task NextPage()
+    {
+        if (CurrentPage < TotalPages && !IsPageLoading)
+        {
+            IsPageLoading = true;
+            CurrentPage++;
+            await LoadStaffMembersAsync();
+            IsPageLoading = false;
+        }
+    }
+
+    private async Task PreviousPage()
+    {
+        if (CurrentPage > 1 && !IsPageLoading)
+        {
+            IsPageLoading = true;
+            CurrentPage--;
+            await LoadStaffMembersAsync();
+            IsPageLoading = false;
+        }
+    }
+
+    private string GetTeamName(int? teamId) =>
+        Teams.FirstOrDefault(t => t.TeamId == teamId)?.Name ?? "—";
+
+    private void ShowAddForm()
+    {
+        IsEditMode = false;
+        EditingStaffMemberId = null;
+        NewStaffMember = new StaffMemberFormModel();
+        ShowForm = true;
+        ErrorMessage = null;
+        SuccessMessage = null;
+    }
+
+    private void ShowEditForm(StaffMemberListDto member)
+    {
+        IsEditMode = true;
+        EditingStaffMemberId = member.StaffMemberId;
+        NewStaffMember = new StaffMemberFormModel
+        {
+            FirstName = member.FirstName ?? string.Empty,
+            LastName = member.LastName ?? string.Empty,
+            Email = member.Email,
+            Role = Enum.TryParse<StaffRole>(member.Role, out var role) ? role : null,
+            TeamID = member.TeamId
+        };
+        ShowForm = true;
+        ErrorMessage = null;
+        SuccessMessage = null;
+        NavigationManager.NavigateTo("/crud/staff-members#top", forceLoad: false);
+    }
+
+    private void HideForm()
+    {
+        ShowForm = false;
+        IsEditMode = false;
+        EditingStaffMemberId = null;
+        NewStaffMember = new StaffMemberFormModel();
+    }
+
+    private async Task SaveStaffMemberAsync()
+    {
+        if (IsEditMode)
+        {
+            await UpdateStaffMemberAsync();
+        }
+        else
+        {
+            await AddStaffMemberAsync();
+        }
+    }
+
+    private async Task AddStaffMemberAsync()
+    {
+        IsSaving = true;
+        ErrorMessage = null;
+        SuccessMessage = null;
+
+        try
+        {
+            var request = new StaffMember
+            {
+                FirstName = NewStaffMember.FirstName?.Trim(),
+                LastName = NewStaffMember.LastName?.Trim(),
+                Email = NewStaffMember.Email?.Trim(),
+                Role = NewStaffMember.Role,
+                TeamID = NewStaffMember.TeamID
+            };
+
+            await ApiClient.Api.StaffMembers.PostAsync(request);
+            SuccessMessage = "Staff member added successfully.";
+            HideForm();
+            await LoadStaffMembersAsync();
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Failed to add staff member: {ex.Message}";
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+
+    private async Task UpdateStaffMemberAsync()
+    {
+        if (!EditingStaffMemberId.HasValue)
+        {
+            ErrorMessage = "Cannot update staff member without a valid ID.";
+            return;
+        }
+
+        IsSaving = true;
+        ErrorMessage = null;
+        SuccessMessage = null;
+
+        try
+        {
+            var request = new StaffMember
+            {
+                StaffMemberID = EditingStaffMemberId.Value,
+                FirstName = NewStaffMember.FirstName?.Trim(),
+                LastName = NewStaffMember.LastName?.Trim(),
+                Email = NewStaffMember.Email?.Trim(),
+                Role = NewStaffMember.Role,
+                TeamID = NewStaffMember.TeamID
+            };
+
+            await ApiClient.Api.StaffMembers[EditingStaffMemberId.Value].PutAsync(request);
+            SuccessMessage = "Staff member updated successfully.";
+            HideForm();
+            await LoadStaffMembersAsync();
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Failed to update staff member: {ex.Message}";
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+
+    private async Task DeleteCurrentStaffMemberAsync()
+    {
+        if (!EditingStaffMemberId.HasValue)
+        {
+            ErrorMessage = "Cannot delete staff member without a valid ID.";
+            return;
+        }
+
+        var member = StaffMemberItems.FirstOrDefault(m => m.StaffMemberId == EditingStaffMemberId.Value);
+        if (member == null)
+        {
+            ErrorMessage = "Staff member not found.";
+            return;
+        }
+
+        var displayName = $"{member.FirstName} {member.LastName}".Trim();
+        var confirmed = await confirmDialog.ShowAsync($"Delete {displayName}?\nThis action cannot be undone.");
+
+        if (!confirmed)
+        {
+            return;
+        }
+
+        try
+        {
+            await ApiClient.Api.StaffMembers[EditingStaffMemberId.Value].DeleteAsync();
+            await LoadStaffMembersAsync();
+            SuccessMessage = "Staff member deleted successfully.";
+            HideForm();
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Failed to delete staff member: {ex.Message}";
+        }
+    }
+
+    private sealed class StaffMemberFormModel
+    {
+        [Required]
+        public string FirstName { get; set; } = string.Empty;
+
+        [Required]
+        public string LastName { get; set; } = string.Empty;
+
+        [EmailAddress]
+        public string? Email { get; set; }
+
+        [Required]
+        public StaffRole? Role { get; set; }
+
+        public int? TeamID { get; set; }
+    }
+}

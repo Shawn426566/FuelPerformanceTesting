@@ -1,0 +1,443 @@
+@page "/crud/evaluations"
+@inject FuelApiClient ApiClient
+@inject NavigationManager NavigationManager
+
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.Kiota.Abstractions
+@using FuelWebUi.ApiClient.Models
+
+<h1>Evaluations</h1>
+
+@if (!string.IsNullOrWhiteSpace(SuccessMessage))
+{
+    <div class="alert alert-success">@SuccessMessage</div>
+}
+
+@if (!string.IsNullOrWhiteSpace(ErrorMessage))
+{
+    <div class="alert alert-danger">@ErrorMessage</div>
+}
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div></div>
+            <button class="btn btn-primary" @onclick="ShowAddForm">
+                <span class="bi bi-plus-circle me-1"></span> Add Evaluation
+            </button>
+        </div>
+
+        @if (IsLoading)
+        {
+            <p>Loading...</p>
+        }
+        else if (EvaluationItems.Count == 0)
+        {
+            <p>No evaluations found.</p>
+        }
+        else
+        {
+            <div class="mb-3 d-flex justify-content-between align-items-center">
+                <div>
+                    Showing @((CurrentPage - 1) * PageSize + 1) - @Math.Min(CurrentPage * PageSize, TotalCount) of @TotalCount evaluations
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-sm btn-outline-primary" @onclick="PreviousPage" disabled="@(CurrentPage == 1)">
+                        <span class="bi bi-chevron-left"></span> Previous
+                    </button>
+                    <button class="btn btn-sm btn-outline-primary" disabled>
+                        Page @CurrentPage of @TotalPages
+                    </button>
+                    <button class="btn btn-sm btn-outline-primary" @onclick="NextPage" disabled="@(CurrentPage >= TotalPages)">
+                        Next <span class="bi bi-chevron-right"></span>
+                    </button>
+                </div>
+            </div>
+
+            <table class="table table-striped table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Player</th>
+                        <th>Evaluator</th>
+                        <th>Summary</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var evaluation in EvaluationItems)
+                    {
+                        <tr style="cursor: pointer;" @onclick="() => ShowEditFormAsync(evaluation)">
+                            <td>@evaluation.Date?.ToString("d")</td>
+                            <td>@(evaluation.PlayerName ?? "-")</td>
+                            <td>@(evaluation.StaffMemberName ?? "-")</td>
+                            <td>@evaluation.Summary</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+
+    @if (ShowForm)
+    {
+        <div class="col-lg-4" id="edit-form" style="position:sticky;top:20px;height:fit-content;">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="card-title mb-0">@(IsEditMode ? "Edit Evaluation" : "Add Evaluation")</h5>
+                        <button type="button" class="btn-close" @onclick="HideForm"></button>
+                    </div>
+
+                    <EditForm Model="NewEvaluation" OnValidSubmit="SaveEvaluationAsync">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+
+                        <div class="mb-3">
+                            <label class="form-label">Date</label>
+                            <InputDate class="form-control" @bind-Value="NewEvaluation.Date" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Player</label>
+                            <InputSelect class="form-select" @bind-Value="NewEvaluation.PlayerId">
+                                <option value="">Select player</option>
+                                @foreach (var player in Players)
+                                {
+                                    <option value="@player.PlayerId">@player.FirstName @player.LastName</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Evaluator</label>
+                            <InputSelect class="form-select" @bind-Value="NewEvaluation.StaffMemberId">
+                                <option value="">Select evaluator</option>
+                                @foreach (var staff in StaffMembers)
+                                {
+                                    <option value="@staff.StaffMemberId">@staff.FirstName @staff.LastName</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Summary</label>
+                            <InputTextArea class="form-control" rows="4" @bind-Value="NewEvaluation.Summary" />
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-primary" type="submit" disabled="@IsSaving">
+                                @(IsSaving ? "Saving..." : IsEditMode ? "Update Evaluation" : "Add Evaluation")
+                            </button>
+                            <button class="btn btn-secondary" type="button" @onclick="HideForm">
+                                Cancel
+                            </button>
+                            @if (IsEditMode)
+                            {
+                                <button class="btn btn-danger ms-auto" type="button" @onclick="DeleteCurrentEvaluationAsync">
+                                    Delete
+                                </button>
+                            }
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<ConfirmDialog @ref="confirmDialog" Title="Delete Evaluation" ConfirmText="Delete" />
+
+@code {
+    private ConfirmDialog confirmDialog = default!;
+    private List<EvaluationListDto> EvaluationItems { get; set; } = new();
+    private List<PlayerListDto> Players { get; set; } = new();
+    private List<StaffMemberListDto> StaffMembers { get; set; } = new();
+    private EvaluationFormModel NewEvaluation { get; set; } = new();
+    private bool IsLoading { get; set; } = true;
+    private bool IsSaving { get; set; }
+    private bool ShowForm { get; set; }
+    private bool IsEditMode { get; set; }
+    private int? EditingEvaluationId { get; set; }
+    private string? ErrorMessage { get; set; }
+    private string? SuccessMessage { get; set; }
+
+    // Pagination properties
+    private int CurrentPage { get; set; } = 1;
+    private int PageSize { get; set; } = 30;
+    private int TotalCount { get; set; }
+    private int TotalPages => TotalCount > 0 ? (int)Math.Ceiling(TotalCount / (double)PageSize) : 1;
+
+    private bool IsPageLoading { get; set; } = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task NextPage()
+    {
+        if (CurrentPage < TotalPages && !IsPageLoading)
+        {
+            IsPageLoading = true;
+            CurrentPage++;
+            await LoadEvaluationsAsync();
+            IsPageLoading = false;
+        }
+    }
+
+    private async Task PreviousPage()
+    {
+        if (CurrentPage > 1 && !IsPageLoading)
+        {
+            IsPageLoading = true;
+            CurrentPage--;
+            await LoadEvaluationsAsync();
+            IsPageLoading = false;
+        }
+    }
+
+    private async Task LoadDataAsync()
+    {
+        try
+        {
+            ErrorMessage = null;
+            var response = await ApiClient.Api.Evaluations.GetAsync(config =>
+            {
+                config.QueryParameters.SortBy = "date";
+                config.QueryParameters.SortDir = "desc";
+                config.QueryParameters.Page = CurrentPage;
+                config.QueryParameters.PageSize = PageSize;
+            });
+
+            EvaluationItems = response?.Items ?? new List<EvaluationListDto>();
+            TotalCount = response?.TotalCount ?? 0;
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Failed to load data: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task LoadEvaluationsAsync()
+    {
+        try
+        {
+            ErrorMessage = null;
+            var response = await ApiClient.Api.Evaluations.GetAsync(config =>
+            {
+                config.QueryParameters.SortBy = "date";
+                config.QueryParameters.SortDir = "desc";
+                config.QueryParameters.Page = CurrentPage;
+                config.QueryParameters.PageSize = PageSize;
+            });
+            EvaluationItems = response?.Items ?? new List<EvaluationListDto>();
+            TotalCount = response?.TotalCount ?? 0;
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Failed to load evaluations: {ex.Message}";
+        }
+    }
+
+    private async Task EnsureLookupDataLoadedAsync()
+    {
+        if (Players.Count > 0 && StaffMembers.Count > 0)
+        {
+            return;
+        }
+
+        var playersTask = ApiClient.Api.Players.GetAsync(config =>
+        {
+            config.QueryParameters.Page = 1;
+            config.QueryParameters.PageSize = 1000;
+        });
+        var staffTask = ApiClient.Api.StaffMembers.GetAsync(config =>
+        {
+            config.QueryParameters.Page = 1;
+            config.QueryParameters.PageSize = 1000;
+        });
+
+        await Task.WhenAll(playersTask, staffTask);
+
+        var playersResult = await playersTask;
+        var staffResult = await staffTask;
+        Players = playersResult?.Items ?? new List<PlayerListDto>();
+        StaffMembers = staffResult?.Items ?? new List<StaffMemberListDto>();
+    }
+
+    private async Task ShowAddForm()
+    {
+        await EnsureLookupDataLoadedAsync();
+        IsEditMode = false;
+        EditingEvaluationId = null;
+        NewEvaluation = new EvaluationFormModel();
+        ShowForm = true;
+        ErrorMessage = null;
+        SuccessMessage = null;
+    }
+
+    private async Task ShowEditFormAsync(EvaluationListDto evaluation)
+    {
+        await EnsureLookupDataLoadedAsync();
+        IsEditMode = true;
+        EditingEvaluationId = evaluation.EvaluationId;
+        NewEvaluation = new EvaluationFormModel
+        {
+            Date = evaluation.Date.HasValue
+                ? evaluation.Date.Value.DateTime
+                : null,
+            PlayerId = evaluation.PlayerId,
+            StaffMemberId = evaluation.StaffMemberId,
+            Summary = evaluation.Summary
+        };
+        ShowForm = true;
+        ErrorMessage = null;
+        SuccessMessage = null;
+    }
+
+    private void HideForm()
+    {
+        ShowForm = false;
+        IsEditMode = false;
+        EditingEvaluationId = null;
+        NewEvaluation = new EvaluationFormModel();
+    }
+
+    private async Task SaveEvaluationAsync()
+    {
+        if (IsEditMode)
+        {
+            await UpdateEvaluationAsync();
+        }
+        else
+        {
+            await AddEvaluationAsync();
+        }
+    }
+
+    private async Task AddEvaluationAsync()
+    {
+        IsSaving = true;
+        ErrorMessage = null;
+        SuccessMessage = null;
+
+        try
+        {
+            var request = new Evaluation
+            {
+                Date = NewEvaluation.Date.HasValue
+                    ? new Date(NewEvaluation.Date.Value.Year, NewEvaluation.Date.Value.Month, NewEvaluation.Date.Value.Day)
+                    : null,
+                PlayerId = NewEvaluation.PlayerId,
+                StaffMemberId = NewEvaluation.StaffMemberId,
+                Summary = NewEvaluation.Summary?.Trim()
+            };
+
+            await ApiClient.Api.Evaluations.PostAsync(request);
+            SuccessMessage = "Evaluation added successfully.";
+            HideForm();
+            await LoadEvaluationsAsync();
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Failed to add evaluation: {ex.Message}";
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+
+    private async Task UpdateEvaluationAsync()
+    {
+        if (!EditingEvaluationId.HasValue)
+        {
+            ErrorMessage = "Cannot update evaluation without a valid ID.";
+            return;
+        }
+
+        IsSaving = true;
+        ErrorMessage = null;
+        SuccessMessage = null;
+
+        try
+        {
+            var request = new Evaluation
+            {
+                EvaluationId = EditingEvaluationId.Value,
+                Date = NewEvaluation.Date.HasValue
+                    ? new Date(NewEvaluation.Date.Value.Year, NewEvaluation.Date.Value.Month, NewEvaluation.Date.Value.Day)
+                    : null,
+                PlayerId = NewEvaluation.PlayerId,
+                StaffMemberId = NewEvaluation.StaffMemberId,
+                Summary = NewEvaluation.Summary?.Trim()
+            };
+
+            await ApiClient.Api.Evaluations[EditingEvaluationId.Value].PutAsync(request);
+            SuccessMessage = "Evaluation updated successfully.";
+            HideForm();
+            await LoadEvaluationsAsync();
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Failed to update evaluation: {ex.Message}";
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+
+    private async Task DeleteCurrentEvaluationAsync()
+    {
+        if (!EditingEvaluationId.HasValue)
+        {
+            ErrorMessage = "Cannot delete evaluation without a valid ID.";
+            return;
+        }
+
+        var evaluation = EvaluationItems.FirstOrDefault(e => e.EvaluationId == EditingEvaluationId.Value);
+        if (evaluation == null)
+        {
+            ErrorMessage = "Evaluation not found.";
+            return;
+        }
+
+        var confirmed = await confirmDialog.ShowAsync("Delete this evaluation?\nThis action cannot be undone.");
+
+        if (!confirmed)
+        {
+            return;
+        }
+
+        try
+        {
+            await ApiClient.Api.Evaluations[EditingEvaluationId.Value].DeleteAsync();
+            EvaluationItems.RemoveAll(e => e.EvaluationId == EditingEvaluationId.Value);
+            SuccessMessage = "Evaluation deleted successfully.";
+            HideForm();
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Failed to delete evaluation: {ex.Message}";
+        }
+    }
+
+    private sealed class EvaluationFormModel
+    {
+        [Required]
+        public DateTime? Date { get; set; }
+
+        [Required]
+        public int? PlayerId { get; set; }
+
+        [Required]
+        public int? StaffMemberId { get; set; }
+
+        public string? Summary { get; set; }
+    }
+}

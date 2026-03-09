@@ -1,0 +1,549 @@
+@page "/crud/players"
+@inject FuelApiClient ApiClient
+@inject NavigationManager NavigationManager
+
+@using System.ComponentModel.DataAnnotations
+@using FuelWebUi.ApiClient.Models
+
+<h1>Players</h1>
+
+@if (!string.IsNullOrWhiteSpace(SuccessMessage))
+{
+    <div class="alert alert-success">@SuccessMessage</div>
+}
+
+@if (!string.IsNullOrWhiteSpace(ErrorMessage))
+{
+    <div class="alert alert-danger">@ErrorMessage</div>
+}
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div></div>
+            <button class="btn btn-primary" @onclick="ShowAddForm">
+                <span class="bi bi-plus-circle me-1"></span> Add Player
+            </button>
+        </div>
+
+        @if (IsLoading)
+        {
+            <p>Loading...</p>
+        }
+        else if (PlayerItems.Count == 0)
+        {
+            <p>No players found.</p>
+        }
+        else
+        {
+            <div class="mb-3 d-flex justify-content-between align-items-center">
+                <div>
+                    Showing @((CurrentPage - 1) * PageSize + 1) - @Math.Min(CurrentPage * PageSize, TotalCount) of @TotalCount players
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-sm btn-outline-primary" @onclick="PreviousPage" disabled="@(CurrentPage == 1)">
+                        <span class="bi bi-chevron-left"></span> Previous
+                    </button>
+                    <button class="btn btn-sm btn-outline-primary" disabled>
+                        Page @CurrentPage of @TotalPages
+                    </button>
+                    <button class="btn btn-sm btn-outline-primary" @onclick="NextPage" disabled="@(CurrentPage >= TotalPages)">
+                        Next <span class="bi bi-chevron-right"></span>
+                    </button>
+                </div>
+            </div>
+
+            <table class="table table-striped table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Age</th>
+                        <th>Position</th>
+                        <th>Jersey</th>
+                        <th>Team</th>
+                        <th>Association</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var player in PlayerItems)
+                    {
+                        <tr style="cursor: pointer;" @onclick="() => ShowEditFormAsync(player)">
+                            <td>@player.FirstName @player.LastName</td>
+                            <td>@(GetAge(player.JerseyNumber))</td>
+                            <td>@player.Position</td>
+                            <td>@player.JerseyNumber</td>
+                            <td>@(player.TeamName ?? "—")</td>
+                            <td>@(player.AssociationName ?? "—")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+
+    @if (ShowForm)
+    {
+        <div class="col-lg-4" id="edit-form" style="position:sticky;top:20px;height:fit-content;">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="card-title mb-0">@(IsEditMode ? "Edit Player" : "Add Player")</h5>
+                        <button type="button" class="btn-close" @onclick="HideForm"></button>
+                    </div>
+
+                <EditForm Model="NewPlayer" OnValidSubmit="SavePlayerAsync">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <div class="mb-3">
+                        <label class="form-label">First Name</label>
+                        <InputText class="form-control" @bind-Value="NewPlayer.FirstName" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Last Name</label>
+                        <InputText class="form-control" @bind-Value="NewPlayer.LastName" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <InputText class="form-control" @bind-Value="NewPlayer.Email" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Birth Date</label>
+                        <InputDate class="form-control" @bind-Value="NewPlayer.BirthDate" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Jersey Number</label>
+                        <InputNumber class="form-control" @bind-Value="NewPlayer.JerseyNumber" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Position</label>
+                        <InputSelect class="form-select" @bind-Value="NewPlayer.Position">
+                            <option value="">Select position</option>
+                            @foreach (var position in Enum.GetValues<Position>())
+                            {
+                                <option value="@position">@position</option>
+                            }
+                        </InputSelect>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Association</label>
+                        <InputSelect class="form-select" @bind-Value="NewPlayer.AssociationID" @bind-Value:after="OnAssociationChanged">
+                            <option value="">Select association</option>
+                            @foreach (var assoc in Associations)
+                            {
+                                <option value="@assoc.AssociationId">@assoc.Name</option>
+                            }
+                        </InputSelect>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Team</label>
+                        <InputSelect class="form-select" @bind-Value="NewPlayer.TeamID" disabled="@(!NewPlayer.AssociationID.HasValue)">
+                            <option value="">Select team</option>
+                            @foreach (var team in FilteredTeams)
+                            {
+                                <option value="@team.TeamId">@team.Name</option>
+                            }
+                        </InputSelect>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-primary" type="submit" disabled="@IsSaving">
+                            @(IsSaving ? "Saving..." : IsEditMode ? "Update Player" : "Add Player")
+                        </button>
+                        <button class="btn btn-secondary" type="button" @onclick="HideForm">
+                            Cancel
+                        </button>
+                        @if (IsEditMode)
+                        {
+                            <button class="btn btn-danger ms-auto" type="button" @onclick="DeleteCurrentPlayerAsync">
+                                Delete
+                            </button>
+                        }
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+    }
+</div>
+
+<ConfirmDialog @ref="confirmDialog" Title="Delete Player" ConfirmText="Delete" />
+
+@code {
+    private ConfirmDialog confirmDialog = default!;
+    private List<PlayerListDto> PlayerItems { get; set; } = new();
+    private List<TeamListDto> Teams { get; set; } = new();
+    private List<AssociationListDto> Associations { get; set; } = new();
+    private PlayerFormModel NewPlayer { get; set; } = new();
+    private bool IsLoading { get; set; } = true;
+    private bool IsSaving { get; set; }
+    private bool ShowForm { get; set; }
+    private bool IsEditMode { get; set; }
+    private int? EditingPlayerId { get; set; }
+    private string? ErrorMessage { get; set; }
+    private string? SuccessMessage { get; set; }
+
+    // Pagination properties
+    private int CurrentPage { get; set; } = 1;
+    private int PageSize { get; set; } = 30;
+    private int TotalCount { get; set; }
+    private int TotalPages => TotalCount > 0 ? (int)Math.Ceiling(TotalCount / (double)PageSize) : 1;
+
+    private IEnumerable<TeamListDto> FilteredTeams =>
+        Teams.Where(t => t.AssociationId == NewPlayer.AssociationID);
+
+    private bool IsPageLoading { get; set; } = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task NextPage()
+    {
+        if (CurrentPage < TotalPages && !IsPageLoading)
+        {
+            IsPageLoading = true;
+            CurrentPage++;
+            await LoadPlayersAsync();
+            IsPageLoading = false;
+        }
+    }
+
+    private async Task PreviousPage()
+    {
+        if (CurrentPage > 1 && !IsPageLoading)
+        {
+            IsPageLoading = true;
+            CurrentPage--;
+            await LoadPlayersAsync();
+            IsPageLoading = false;
+        }
+    }
+
+    private async Task LoadDataAsync()
+    {
+        try
+        {
+            ErrorMessage = null;
+            var playersTask = ApiClient.Api.Players.GetAsync(config => 
+            {
+                config.QueryParameters.SortBy = "lastName";
+                config.QueryParameters.SortDir = "asc";
+                config.QueryParameters.Page = CurrentPage;
+                config.QueryParameters.PageSize = PageSize;
+            });
+            var teamsTask = ApiClient.Api.Teams.GetAsync(config =>
+            {
+                config.QueryParameters.Page = 1;
+                config.QueryParameters.PageSize = 1000;
+            });
+            var associationsTask = ApiClient.Api.Association.GetAsync(config =>
+            {
+                config.QueryParameters.Page = 1;
+                config.QueryParameters.PageSize = 1000;
+            });
+
+            await Task.WhenAll(playersTask, teamsTask, associationsTask);
+
+            var playersResult = await playersTask;
+            var teamsResult = await teamsTask;
+            var associationsResult = await associationsTask;
+            PlayerItems = playersResult?.Items ?? new List<PlayerListDto>();
+            TotalCount = playersResult?.TotalCount ?? 0;
+            Teams = teamsResult?.Items ?? new List<TeamListDto>();
+            Associations = associationsResult?.Items ?? new List<AssociationListDto>();
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Failed to load data: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task LoadPlayersAsync()
+    {
+        try
+        {
+            ErrorMessage = null;
+            var response = await ApiClient.Api.Players.GetAsync(config => 
+            {
+                config.QueryParameters.SortBy = "lastName";
+                config.QueryParameters.SortDir = "asc";
+                config.QueryParameters.Page = CurrentPage;
+                config.QueryParameters.PageSize = PageSize;
+            });
+            PlayerItems = response?.Items ?? new List<PlayerListDto>();
+            TotalCount = response?.TotalCount ?? 0;
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Failed to load players: {ex.Message}";
+        }
+    }
+
+    private string GetAge(int? jerseyNumber)
+    {
+        // Age removed from list DTO - display jersey number for now
+        return jerseyNumber?.ToString() ?? "—";
+    }
+
+    private void OnAssociationChanged()
+    {
+        // Clear team selection when association changes
+        NewPlayer.TeamID = null;
+    }
+
+    private void ShowAddForm()
+    {
+        IsEditMode = false;
+        EditingPlayerId = null;
+        NewPlayer = new PlayerFormModel();
+        ShowForm = true;
+        ErrorMessage = null;
+        SuccessMessage = null;
+    }
+
+    private async Task ShowEditFormAsync(PlayerListDto player)
+    {
+        IsEditMode = true;
+        EditingPlayerId = player.PlayerId;
+        ShowForm = true;
+        ErrorMessage = null;
+        SuccessMessage = null;
+
+        // Need to fetch full Player entity for edit - DTO doesn't have all fields
+        if (player.PlayerId.HasValue)
+        {
+            await LoadPlayerForEditAsync(player.PlayerId.Value);
+        }
+    }
+
+    private async Task LoadPlayerForEditAsync(int playerId)
+    {
+        try
+        {
+            var fullPlayer = await ApiClient.Api.Players[playerId].GetAsync();
+            if (fullPlayer != null)
+            {
+                NewPlayer = new PlayerFormModel
+                {
+                    FirstName = fullPlayer.FirstName ?? string.Empty,
+                    LastName = fullPlayer.LastName ?? string.Empty,
+                    Email = fullPlayer.Email,
+                    BirthDate = fullPlayer.BirthDate?.DateTime,
+                    JerseyNumber = fullPlayer.JerseyNumber,
+                    Position = fullPlayer.Position,
+                    AssociationID = fullPlayer.AssociationID,
+                    TeamID = fullPlayer.TeamID
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Failed to load player details: {ex.Message}";
+        }
+    }
+
+    private void HideForm()
+    {
+        ShowForm = false;
+        IsEditMode = false;
+        EditingPlayerId = null;
+        NewPlayer = new PlayerFormModel();
+    }
+
+    private async Task SavePlayerAsync()
+    {
+        if (IsEditMode)
+        {
+            await UpdatePlayerAsync();
+        }
+        else
+        {
+            await AddPlayerAsync();
+        }
+    }
+
+    private async Task UpdatePlayerAsync()
+    {
+        if (!EditingPlayerId.HasValue)
+        {
+            ErrorMessage = "Cannot update player without a valid ID.";
+            return;
+        }
+
+        IsSaving = true;
+        ErrorMessage = null;
+        SuccessMessage = null;
+
+        try
+        {
+            var request = new Player
+            {
+                PlayerID = EditingPlayerId.Value,
+                FirstName = NewPlayer.FirstName?.Trim(),
+                LastName = NewPlayer.LastName?.Trim(),
+                Email = NewPlayer.Email?.Trim(),
+                BirthDate = NewPlayer.BirthDate.HasValue
+                    ? new DateTimeOffset(NewPlayer.BirthDate.Value.Date, TimeSpan.Zero)
+                    : null,
+                JerseyNumber = NewPlayer.JerseyNumber,
+                Position = NewPlayer.Position,
+                TeamID = NewPlayer.TeamID,
+                AssociationID = NewPlayer.AssociationID,
+            };
+
+            await ApiClient.Api.Players[EditingPlayerId.Value].PutAsync(request);
+            SuccessMessage = "Player updated successfully.";
+            HideForm();
+            await LoadPlayersAsync();
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Failed to update player: {ex.Message}";
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+
+    private async Task AddPlayerAsync()
+    {
+        IsSaving = true;
+        ErrorMessage = null;
+        SuccessMessage = null;
+
+        try
+        {
+            var request = new Player
+            {
+                FirstName = NewPlayer.FirstName?.Trim(),
+                LastName = NewPlayer.LastName?.Trim(),
+                Email = NewPlayer.Email?.Trim(),
+                BirthDate = NewPlayer.BirthDate.HasValue
+                    ? new DateTimeOffset(NewPlayer.BirthDate.Value.Date, TimeSpan.Zero)
+                    : null,
+                JerseyNumber = NewPlayer.JerseyNumber,
+                Position = NewPlayer.Position,
+                TeamID = NewPlayer.TeamID,
+                AssociationID = NewPlayer.AssociationID,
+            };
+
+            await ApiClient.Api.Players.PostAsync(request);
+            SuccessMessage = "Player added successfully.";
+            HideForm();
+            await LoadPlayersAsync();
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Failed to add player: {ex.Message}";
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+
+    private async Task DeletePlayerAsync(PlayerListDto player)
+    {
+        ErrorMessage = null;
+        SuccessMessage = null;
+
+        if (player.PlayerId is not int playerId)
+        {
+            ErrorMessage = "Cannot delete player without a valid ID.";
+            return;
+        }
+
+        var displayName = $"{player.FirstName} {player.LastName}".Trim();
+        var confirmed = await confirmDialog.ShowAsync($"Delete {displayName}?\nThis action cannot be undone.");
+
+        if (!confirmed)
+        {
+            return;
+        }
+
+        try
+        {
+            await ApiClient.Api.Players[playerId].DeleteAsync();
+            await LoadPlayersAsync();
+            SuccessMessage = "Player deleted successfully.";
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Failed to delete player: {ex.Message}";
+        }
+    }
+
+    private async Task DeleteCurrentPlayerAsync()
+    {
+        if (!EditingPlayerId.HasValue)
+        {
+            ErrorMessage = "Cannot delete player without a valid ID.";
+            return;
+        }
+
+        var player = PlayerItems.FirstOrDefault(p => p.PlayerId == EditingPlayerId.Value);
+        if (player == null)
+        {
+            ErrorMessage = "Player not found.";
+            return;
+        }
+
+        var displayName = $"{player.FirstName} {player.LastName}".Trim();
+        var confirmed = await confirmDialog.ShowAsync($"Delete {displayName}?\nThis action cannot be undone.");
+
+        if (!confirmed)
+        {
+            return;
+        }
+
+        try
+        {
+            await ApiClient.Api.Players[EditingPlayerId.Value].DeleteAsync();
+            await LoadPlayersAsync();
+            SuccessMessage = "Player deleted successfully.";
+            HideForm();
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Failed to delete player: {ex.Message}";
+        }
+    }
+
+    private sealed class PlayerFormModel
+    {
+        [Required]
+        public string FirstName { get; set; } = string.Empty;
+
+        [Required]
+        public string LastName { get; set; } = string.Empty;
+
+        [EmailAddress]
+        public string? Email { get; set; }
+
+        [Required]
+        public DateTime? BirthDate { get; set; }
+
+        [Range(0, 99)]
+        public int? JerseyNumber { get; set; }
+
+        public Position? Position { get; set; }
+
+        public int? TeamID { get; set; }
+
+        public int? AssociationID { get; set; }
+    }
+}

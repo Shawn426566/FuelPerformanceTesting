@@ -1,0 +1,98 @@
+﻿@inherits LayoutComponentBase
+@inject NavigationManager NavigationManager
+
+<div class="page">
+    <div class="sidebar">
+        <NavMenu />
+    </div>
+
+    <main>
+        <article class="content px-4">
+            @if (BreadcrumbItems.Count > 0)
+            {
+                <nav aria-label="breadcrumb" class="mt-3 mb-2">
+                    <ol class="breadcrumb mb-0">
+                        @for (var index = 0; index < BreadcrumbItems.Count; index++)
+                        {
+                            var item = BreadcrumbItems[index];
+                            var isLast = index == BreadcrumbItems.Count - 1;
+
+                            if (isLast)
+                            {
+                                <li class="breadcrumb-item active" aria-current="page">@item.Label</li>
+                            }
+                            else
+                            {
+                                <li class="breadcrumb-item"><a href="@item.Href">@item.Label</a></li>
+                            }
+                        }
+                    </ol>
+                </nav>
+            }
+            @Body
+        </article>
+    </main>
+</div>
+
+@code {
+    private List<BreadcrumbItem> BreadcrumbItems { get; set; } = new();
+
+    protected override void OnInitialized()
+    {
+        NavigationManager.LocationChanged += OnLocationChanged;
+        BuildBreadcrumbs();
+    }
+
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        BuildBreadcrumbs();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void BuildBreadcrumbs()
+    {
+        var relative = NavigationManager.ToBaseRelativePath(NavigationManager.Uri).Trim('/');
+
+        if (string.IsNullOrWhiteSpace(relative))
+        {
+            BreadcrumbItems = new();
+            return;
+        }
+
+        var parts = relative.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        var items = new List<BreadcrumbItem>();
+        var currentPath = string.Empty;
+
+        foreach (var part in parts)
+        {
+            currentPath = $"{currentPath}/{part}";
+            items.Add(new BreadcrumbItem
+            {
+                Label = ToLabel(part),
+                Href = currentPath
+            });
+        }
+
+        BreadcrumbItems = items;
+    }
+
+    private static string ToLabel(string segment)
+    {
+        return segment.Replace('-', ' ') switch
+        {
+            "crud" => "CRUD",
+            _ => System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(segment.Replace('-', ' '))
+        };
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= OnLocationChanged;
+    }
+
+    private sealed class BreadcrumbItem
+    {
+        public string Label { get; set; } = string.Empty;
+        public string Href { get; set; } = string.Empty;
+    }
+}
