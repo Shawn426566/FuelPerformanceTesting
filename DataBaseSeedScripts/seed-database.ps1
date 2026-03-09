@@ -255,32 +255,48 @@ try {
     
     # Create evaluations for players
     Write-Host "Creating evaluations..." -ForegroundColor Yellow
-    $allPlayers = Invoke-ApiCall -Method "GET" -Endpoint "/api/players"
-    
-    foreach ($player in $allPlayers) {
-        for ($eval = 0; $eval -lt 3; $eval++) {
-            $randomEvaluator = $evaluators | Get-Random
-            $randomDays = Get-Random -Minimum -90 -Maximum 0
-            $evalDate = (Get-Date).AddDays($randomDays)
-            $summaries = @(
-                "Strong performance across all areas",
-                "Needs improvement on positioning",
-                "Excellent effort and technique",
-                "Good fundamentals, keep working",
-                "Outstanding game sense",
-                "Focus on skill development",
-                "Great defensive play",
-                "Continue building conditioning",
-                "Solid contribution to team",
-                "Working well with teammates"
-            )
-            $randomSummary = $summaries | Get-Random
-            
-            $evalBody = New-Evaluation -PlayerId $player.playerID -StaffMemberId $randomEvaluator.staffMemberID -EvaluationDate $evalDate -Summary $randomSummary
-            $evaluation = Invoke-ApiCall -Method "POST" -Endpoint "/api/evaluations" -Body $evalBody
+    $allPlayersList = @()
+    $page = 1
+    $pageSize = 200
+    do {
+        $response = Invoke-ApiCall -Method "GET" -Endpoint "/api/players?page=$page&pageSize=$pageSize"
+        if ($response.items) {
+            $allPlayersList += $response.items
+            $page++
+        } else {
+            break
+        }
+    } while ($true)
+
+    $evalCount = 0
+    foreach ($player in $allPlayersList) {
+        if ($player.playerId -ne 0) {
+            for ($eval = 0; $eval -lt 3; $eval++) {
+                $randomEvaluator = $evaluators | Get-Random
+                $randomDays = Get-Random -Minimum -90 -Maximum 0
+                $evalDate = (Get-Date).AddDays($randomDays)
+                $summaries = @(
+                    "Strong performance across all areas",
+                    "Needs improvement on positioning",
+                    "Excellent effort and technique",
+                    "Good fundamentals, keep working",
+                    "Outstanding game sense",
+                    "Focus on skill development",
+                    "Great defensive play",
+                    "Continue building conditioning",
+                    "Solid contribution to team",
+                    "Working well with teammates"
+                )
+                $randomSummary = $summaries | Get-Random
+                $evalBody = New-Evaluation -PlayerId $player.playerId -StaffMemberId $randomEvaluator.staffMemberID -EvaluationDate $evalDate -Summary $randomSummary
+                $evaluation = Invoke-ApiCall -Method "POST" -Endpoint "/api/evaluations" -Body $evalBody
+                $evalCount++
+            }
+        } else {
+            Write-Host "Skipping evaluation for player with invalid playerID (0)" -ForegroundColor Red
         }
     }
-    Write-Host "Created 3 evaluations per player ($($allPlayers.Count * 3) total)" -ForegroundColor Cyan
+    Write-Host "Created 3 evaluations per player ($evalCount total)" -ForegroundColor Cyan
     
     Write-Host "Database seeding completed successfully!" -ForegroundColor Green
 }

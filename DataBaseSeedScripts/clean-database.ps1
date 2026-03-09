@@ -39,39 +39,89 @@ Write-Host "Starting database cleanup..." -ForegroundColor Cyan
 
 try {
     Write-Host "Fetching and deleting all evaluations..." -ForegroundColor Yellow
-    $allEvaluations = Invoke-ApiCall -Method "GET" -Endpoint "/api/evaluations"
-    foreach ($evaluation in $allEvaluations) {
+    $allEvaluationsList = @()
+    $page = 1
+    $pageSize = 200
+    do {
+        $response = Invoke-ApiCall -Method "GET" -Endpoint "/api/evaluations?page=$page&pageSize=$pageSize"
+        if ($response.items) {
+            $allEvaluationsList += $response.items
+            $page++
+        } else {
+            break
+        }
+    } while ($true)
+    foreach ($evaluation in $allEvaluationsList) {
         Write-Host "  Deleting evaluation (ID: $($evaluation.evaluationId))" -ForegroundColor Red
         Invoke-ApiCall -Method "DELETE" -Endpoint "/api/evaluations/$($evaluation.evaluationId)"
     }
-    
+
     Write-Host "Fetching and deleting all players..." -ForegroundColor Yellow
-    $allPlayers = Invoke-ApiCall -Method "GET" -Endpoint "/api/players"
-    foreach ($player in $allPlayers) {
-        Write-Host "  Deleting player: $($player.firstName) $($player.lastName) (ID: $($player.playerID))" -ForegroundColor Red
-        Invoke-ApiCall -Method "DELETE" -Endpoint "/api/players/$($player.playerID)"
+    $allPlayersList = @()
+    $page = 1
+    do {
+        $response = Invoke-ApiCall -Method "GET" -Endpoint "/api/players?page=$page&pageSize=$pageSize"
+        if ($response.items) {
+            $allPlayersList += $response.items
+            $page++
+        } else {
+            break
+        }
+    } while ($true)
+    foreach ($player in $allPlayersList) {
+        Write-Host "  Deleting player: $($player.firstName) $($player.lastName) (ID: $($player.playerId))" -ForegroundColor Red
+        Invoke-ApiCall -Method "DELETE" -Endpoint "/api/players/$($player.playerId)"
     }
-    
+
     Write-Host "Fetching and deleting all staff members..." -ForegroundColor Yellow
-    $allStaff = Invoke-ApiCall -Method "GET" -Endpoint "/api/staffMembers"
-    foreach ($staff in $allStaff) {
+    $allStaffList = @()
+    $page = 1
+    do {
+        $response = Invoke-ApiCall -Method "GET" -Endpoint "/api/staffMembers?page=$page&pageSize=$pageSize"
+        if ($response.items) {
+            $allStaffList += $response.items
+            $page++
+        } else {
+            break
+        }
+    } while ($true)
+    foreach ($staff in $allStaffList) {
         Write-Host "  Deleting staff: $($staff.firstName) $($staff.lastName) (ID: $($staff.staffMemberID))" -ForegroundColor Red
         Invoke-ApiCall -Method "DELETE" -Endpoint "/api/staffMembers/$($staff.staffMemberID)"
     }
-    
+
     Write-Host "Fetching and deleting all teams..." -ForegroundColor Yellow
-    $allTeams = Invoke-ApiCall -Method "GET" -Endpoint "/api/teams"
-    foreach ($team in $allTeams) {
+    $allTeamsList = @()
+    $page = 1
+    do {
+        $response = Invoke-ApiCall -Method "GET" -Endpoint "/api/teams?page=$page&pageSize=$pageSize"
+        if ($response.items) {
+            $allTeamsList += $response.items
+            $page++
+        } else {
+            break
+        }
+    } while ($true)
+    foreach ($team in $allTeamsList) {
         if ($team.name -match "(Phoenix Rising|Mountain Lions|Thunder Hawks|Northern Wolves|Silver Eagles)") {
             Write-Host "  Deleting team: $($team.name) (ID: $($team.teamID))" -ForegroundColor Red
             Invoke-ApiCall -Method "DELETE" -Endpoint "/api/teams/$($team.teamID)"
         }
     }
-    
+
     Write-Host "Fetching and deleting associations..." -ForegroundColor Yellow
-    $allAssocs = Invoke-ApiCall -Method "GET" -Endpoint "/api/association"
-    
-    foreach ($assoc in $allAssocs) {
+    $allAssocsList = @()
+    $page = 1
+    do {
+        $response = Invoke-ApiCall -Method "GET" -Endpoint "/api/association?page=$page&pageSize=$pageSize"
+        if ($response.items) {
+            $allAssocsList += $response.items
+            $page++
+        } else {
+            break
+        }
+    } while ($true)
+    foreach ($assoc in $allAssocsList) {
         if ($Associations -contains $assoc.name) {
             Write-Host "Deleting association: $($assoc.name) (ID: $($assoc.associationID))" -ForegroundColor Red
             Invoke-ApiCall -Method "DELETE" -Endpoint "/api/association/$($assoc.associationID)"
