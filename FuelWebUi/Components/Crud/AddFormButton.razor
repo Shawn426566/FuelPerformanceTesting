@@ -1,0 +1,13 @@
+
+<!-- Add Form Button -->
+<div class="d-flex justify-content-end mb-3">
+    <button class="btn btn-primary" @onclick="() => OnAddClicked.InvokeAsync()">
+        <span class="bi bi-plus-circle me-1"></span> Add @EntityName
+    </button>
+</div>
+<!-- End Add Form Button -->
+
+@code {
+    [Parameter] public EventCallback OnAddClicked { get; set; }
+    [Parameter] public string EntityName { get; set; } = String.Empty;
+}

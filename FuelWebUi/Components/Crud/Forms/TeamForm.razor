@@ -1,0 +1,50 @@
+@inject FuelApiClient ApiClient
+
+<!-- Team Specific Form for use as child to Entity Form -->
+<div class="mb-3">
+	<AlertMessage SuccessMessage="@_successMessage" ErrorMessage="@_errorMessage" />
+	<label class="form-label">Team Name</label>
+	<InputText class="form-control" @bind-Value="FormModel.Name" />
+</div>
+<div class="mb-3">
+	<label class="form-label">Association</label>
+	<InputSelect class="form-control" @bind-Value="FormModel.AssociationID"disabled="@(_associations.Count == 0)">
+		<option value="">Select an association</option>
+		@foreach (var association in _associations)
+		{
+			<option value="@association.AssociationId">@association.Name</option>
+		}
+	</InputSelect>
+</div>
+<!-- End Team Specific Form -->
+
+@code {
+    // defined FuelWebUi.Pages.Crud.FormModels.TeamFormModel
+	[Parameter] public TeamFormModel FormModel { get; set; } = new();
+	protected List<AssociationListDto> _associations { get; set; } = new();
+	
+	protected readonly string? _successMessage = null;
+	protected string? _errorMessage { get; set; } = null; 
+
+	// Load Associations for dropdown
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+			_errorMessage = null;
+            var response = await ApiClient.Api.Associations.GetAsync((config =>
+            {
+                config.QueryParameters.SortBy = "name";
+                config.QueryParameters.SortDir = "asc";
+                config.QueryParameters.Page = 0;
+                config.QueryParameters.PageSize = 1000;
+            }));
+            _associations = response?.Items ?? new List<AssociationListDto>();
+        }
+        catch (Exception ex)
+        {
+            _associations = new List<AssociationListDto>();
+            _errorMessage = $"Failed to load associations: {ex.Message}";
+        }
+    }
+}

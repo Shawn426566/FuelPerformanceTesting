@@ -1,0 +1,112 @@
+@inject FuelApiClient ApiClient
+
+<!-- Player Specific Form for use as child to Entity Form -->
+
+<div class="mb-3">
+	<AlertMessage SuccessMessage="@_successMessage" ErrorMessage="@_errorMessage" />
+	<label class="form-label">First Name</label>
+	<InputText class="form-control" @bind-Value="FormModel.FirstName" maxlength="50" />
+</div>
+<div class="mb-3">
+	<label class="form-label">Last Name</label>
+	<InputText class="form-control" @bind-Value="FormModel.LastName" maxlength="50" />
+</div>
+<div class="mb-3">
+	<label class="form-label">Email</label>
+	<InputText class="form-control" @bind-Value="FormModel.Email" type="email" />
+</div>
+<div class="mb-3">
+	<label class="form-label">Birth Date</label>
+	<InputDate class="form-control" @bind-Value="FormModel.BirthDate" min="1950-01-01" max="@DateTime.Today.ToString("yyyy-MM-dd")" />
+</div>
+<div class="mb-3">
+	<label class="form-label">Jersey Number</label>
+	<InputSelect class="form-control" @bind-Value="FormModel.JerseyNumber">
+		<option value="">Select Jersey Number</option>
+		@for (int i = 0; i < 100; i++)
+		{
+			<option value="@i">@i</option>
+		}
+	</InputSelect>
+</div>
+<div class="mb-3">
+	<label class="form-label">Position</label>
+	<InputSelect class="form-control" @bind-Value="FormModel.Position">
+		<option value="">Select Position</option>
+		@foreach (var pos in Enum.GetValues(typeof(FuelWebUi.ApiClient.Models.Position)))
+		{
+			<option value="@pos">@pos</option>
+		}
+	</InputSelect>
+</div>
+<div class="mb-3">
+	<label class="form-label">Team</label>
+	<InputSelect class="form-control" @bind-Value="FormModel.TeamID" disabled="@(_teams.Count == 0)">
+		<option value="">Select Team</option>
+		@foreach (var team in _teams)
+		{
+			<option value="@team.TeamId">@team.Name</option>
+		}
+	</InputSelect>
+</div>
+<div class="mb-3">
+	<label class="form-label">Association</label>
+	<InputSelect class="form-control" @bind-Value="FormModel.AssociationID" disabled="@(_associations.Count == 0)">
+		<option value="">Select Association</option>
+		@foreach (var assoc in _associations)
+		{
+			<option value="@assoc.AssociationId">@assoc.Name</option>
+		}
+	</InputSelect>
+</div>
+<!-- End Player Specific Form -->
+
+@code {
+	// defined FuelWebUi.Pages.Crud.FormModels.PlayerFormModel
+	[Parameter] public PlayerFormModel FormModel { get; set; } = new();
+	protected List<TeamListDto> _teams { get; set; } = new();
+	protected List<AssociationListDto> _associations { get; set; } = new();
+
+	protected readonly string? _successMessage = null;
+	protected string? _errorMessage { get; set; } = null;
+
+	protected override async Task OnInitializedAsync()
+	{
+		try
+		{
+			_errorMessage = null;
+			var teamResponse = await ApiClient.Api.Teams.GetAsync((config =>
+			{
+				config.QueryParameters.SortBy = "Name";
+				config.QueryParameters.SortDir = "asc";
+				config.QueryParameters.Page = 0;
+				config.QueryParameters.PageSize = 1000;
+			}));
+			_teams = teamResponse?.Items ?? new List<TeamListDto>();
+		}
+		catch (Exception ex)
+		{
+			_teams = new List<TeamListDto>();
+			_errorMessage = $"Failed to load teams: {ex.Message}";
+		}
+
+		try
+		{
+			_errorMessage = null;
+			var assocResponse = await ApiClient.Api.Associations.GetAsync((config =>
+			{
+				config.QueryParameters.SortBy = "Name";
+				config.QueryParameters.SortDir = "asc";
+				config.QueryParameters.Page = 0;
+				config.QueryParameters.PageSize = 1000;
+			}));
+			_associations = assocResponse?.Items ?? new List<AssociationListDto>();
+		}
+		catch (Exception ex)
+		{
+			_associations = new List<AssociationListDto>();
+			_errorMessage = $"Failed to load associations: {ex.Message}";
+		}
+	}
+}
+

@@ -1,0 +1,106 @@
+@typeparam TDto
+
+@if (IsLoading)
+{
+    <p>Loading...</p>
+}
+else if (Items == null || !Items.Any())
+{
+    <p>No items found.</p>
+}
+else
+{
+    <!-- Pagination Controls -->
+    <div class="mb-3 d-flex justify-content-between align-items-center">
+        <div>
+            Showing @((CurrentPage - 1) * PageSize + 1) - @Math.Min(CurrentPage * PageSize, TotalCount) of @TotalCount items
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-sm btn-outline-primary" @onclick="PreviousPage" disabled="@(CurrentPage == 1)">
+                <span class="bi bi-chevron-left"></span> Previous
+            </button>
+            <button class="btn btn-sm btn-outline-primary" disabled>
+                Page @CurrentPage of @TotalPages
+            </button>
+            <button class="btn btn-sm btn-outline-primary" @onclick="NextPage" disabled="@(CurrentPage >= TotalPages)">
+                Next <span class="bi bi-chevron-right"></span>
+            </button>
+        </div>
+    </div>
+    <!-- End Pagination Controls -->
+
+    <!-- Entity Table -->
+    <table class="table table-striped table-hover align-middle">
+        <thead>
+            <tr>
+                @foreach (var prop in typeof(TDto).GetProperties())
+                {
+                    if (prop.Name.Contains("Id")) continue; // Skip ID column
+                    <th>@prop.Name</th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Items)
+            {
+                <tr style="cursor: pointer;" @onclick="() => OnRowClickHandler(item)">
+                    @foreach (var prop in typeof(TDto).GetProperties())
+                    {
+                        if (prop.Name.Contains("Id")) continue;
+                        var value = prop.GetValue(item);
+                        // Always display only the first 10 characters for the date column
+                        if (prop.Name.ToLower().Contains("date"))
+                        {
+                            string? strValue = value?.ToString();
+                            <td>@(strValue != null ? strValue.Substring(0, Math.Min(10, strValue.Length)) : "")</td>
+                        }
+                        else if (value != null)
+                        {
+                            <td>@value</td>
+                        }
+                        else
+                        {
+                            <td></td>
+                        }
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+    <!-- End Entity Table -->
+
+    <!-- Pagination Controls -->
+    <div class="mb-3 d-flex justify-content-between align-items-center">
+        <div>
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-sm btn-outline-primary" @onclick="PreviousPage" disabled="@(CurrentPage == 1)">
+                <span class="bi bi-chevron-left"></span> Previous
+            </button>
+            <button class="btn btn-sm btn-outline-primary" disabled>
+                Page @CurrentPage of @TotalPages
+            </button>
+            <button class="btn btn-sm btn-outline-primary" @onclick="NextPage" disabled="@(CurrentPage >= TotalPages)">
+                Next <span class="bi bi-chevron-right"></span>
+            </button>
+        </div>
+    </div>
+    <!-- End Pagination Controls -->
+}
+
+@code {
+    [Parameter] public IEnumerable<TDto>? Items { get; set; }
+    [Parameter] public EventCallback<TDto> OnRowClick { get; set; }
+    [Parameter] public bool IsLoading { get; set; } = false;
+    [Parameter] public int CurrentPage { get; set; } = 1;
+    [Parameter] public int PageSize { get; set; } = 30;
+    [Parameter] public int TotalCount { get; set; } = 0;
+    [Parameter] public int TotalPages { get; set; } = 1;
+    [Parameter] public EventCallback NextPage { get; set; }
+    [Parameter] public EventCallback PreviousPage { get; set; }
+
+    private void OnRowClickHandler(TDto item)
+    {
+        OnRowClick.InvokeAsync(item);
+    }
+}

@@ -1,0 +1,87 @@
+@inject FuelApiClient ApiClient
+
+<!-- Evaluation Specific Form for use as child to Entity Form -->
+<div class="mb-3">
+	<AlertMessage SuccessMessage="@_successMessage" ErrorMessage="@_errorMessage" />
+	<label class="form-label">Date</label>
+	<InputDate class="form-control" @bind-Value="FormModel.Date" />
+</div>
+<div class="mb-3">
+	<label class="form-label">Staff Member</label>
+	<InputSelect class="form-control" @bind-Value="FormModel.StaffMemberId" disabled="@(_staffMembers.Count == 0)">
+		<option value="">Select a staff member</option>
+		@foreach (var staff in _staffMembers)
+		{
+			<option value="@staff.StaffMemberId">@staff.LastName, @staff.FirstName</option>
+		}
+	</InputSelect>
+</div>
+<div class="mb-3">
+	<label class="form-label">Player</label>
+	<InputSelect class="form-control" @bind-Value="FormModel.PlayerId" disabled="@(_players.Count == 0)">
+		<option value="">Select a player</option>
+		@foreach (var player in _players)
+		{
+			<option value="@player.PlayerId">@player.LastName, @player.FirstName</option>
+		}
+	</InputSelect>
+</div>
+<div class="mb-3">
+	<label class="form-label">Summary</label>
+	<InputText class="form-control" @bind-Value="FormModel.Summary" />
+</div>
+<!-- End Evaluation Specific Form -->
+
+
+@code {
+    // defined FuelWebUi.Pages.Crud.FormModels.EvaluationFormModel
+	[Parameter] public EvaluationFormModel FormModel { get; set; } = new();
+	protected List<StaffMemberListDto> _staffMembers { get; set; } = new();
+	protected List<PlayerListDto> _players { get; set; } = new();
+
+	
+	protected readonly string? _successMessage = null;
+	protected string? _errorMessage { get; set; } = null; 
+
+	// Load Staff members and players for dropdowns
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+			_errorMessage = null;
+            var response = await ApiClient.Api.StaffMembers.GetAsync((config =>
+            {
+                config.QueryParameters.SortBy = "LastName";
+                config.QueryParameters.SortDir = "asc";
+                config.QueryParameters.Page = 0;
+                config.QueryParameters.PageSize = 1000;
+            }));
+            _staffMembers = response?.Items ?? new List<StaffMemberListDto>();
+        }
+        catch (Exception ex)
+        {
+            _staffMembers = new List<StaffMemberListDto>();
+            _errorMessage = $"Failed to load staff members: {ex.Message}";
+        }
+
+		        try
+        {
+			_errorMessage = null;
+            var response = await ApiClient.Api.Players.GetAsync((config =>
+            {
+                config.QueryParameters.SortBy = "LastName";
+                config.QueryParameters.SortDir = "asc";
+                config.QueryParameters.Page = 0;
+                config.QueryParameters.PageSize = 1000;
+            }));
+            _players = response?.Items ?? new List<PlayerListDto>();
+        }
+        catch (Exception ex)
+        {
+            _players = new List<PlayerListDto>();
+            _errorMessage = $"Failed to load players: {ex.Message}";
+        }
+
+    }
+}
+

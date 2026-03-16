@@ -1,0 +1,62 @@
+@typeparam TDto
+@typeparam TFormModel
+
+<!-- Full CRUD Entity Page -->
+<div class="row g-4">
+    
+    <div class="col-lg-8">
+        <Title PageTitle="@PageTitle" />
+        <AlertMessage SuccessMessage="@SuccessMessage" ErrorMessage="@ErrorMessage" />
+        <AddFormButton EntityName="@EntityName" OnAddClicked="OnAddClicked" />
+        <EntityTable TDto="TDto"
+            Items="@Items"
+            OnRowClick="OnRowClick"
+            IsLoading="@IsLoading"
+            CurrentPage="@CurrentPage"
+            PageSize="@PageSize"
+            TotalCount="@TotalCount"
+            TotalPages="@TotalPages"
+            NextPage="NextPage"
+            PreviousPage="PreviousPage"
+        />
+    </div>
+    <!-- Form shown when adding/editing an entity, to right of table on larger screens and stays in view when scrolling -->
+    @if (ShowForm){
+        <EntityForm TFormModel="TFormModel"
+            FormModel="@FormModel"
+            IsEditMode="@IsEditMode"
+            IsSaving="@IsSaving"
+            Title="@( IsEditMode ? $"Edit {EntityName}" : $"Add {EntityName}")"
+            OnValidSubmit="OnValidSubmit"
+            OnCancel="OnCancel"
+            OnDelete="OnDelete">
+            @ChildContent
+        </EntityForm>
+    }
+</div>
+<!-- End Full CRUD Entity Page -->
+
+@code {
+    [Parameter] public string PageTitle { get; set; } = "Entity";
+    [Parameter] public string EntityName { get; set; } = "Entity";
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string? SuccessMessage { get; set; }
+    [Parameter] public string? ErrorMessage { get; set; }
+    [Parameter] public IEnumerable<TDto>? Items { get; set; }
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public int CurrentPage { get; set; }
+    [Parameter] public int PageSize { get; set; }
+    [Parameter] public int TotalCount { get; set; }
+    [Parameter] public int TotalPages { get; set; }
+    [Parameter] public bool ShowForm { get; set; }
+    [Parameter] public TFormModel? FormModel { get; set; }
+    [Parameter] public bool IsEditMode { get; set; }
+    [Parameter] public bool IsSaving { get; set; }
+    [Parameter] public EventCallback OnAddClicked { get; set; }
+    [Parameter] public EventCallback<TDto> OnRowClick { get; set; }
+    [Parameter] public EventCallback OnValidSubmit { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public EventCallback OnDelete { get; set; }
+    [Parameter] public EventCallback NextPage { get; set; }
+    [Parameter] public EventCallback PreviousPage { get; set; }
+}

@@ -1,0 +1,13 @@
+<!-- Association Specific Form for use as child to Entity Form -->
+<div class="mb-3">
+    <label class="form-label">Name</label>
+    <InputText class="form-control" @bind-Value="FormModel.Name" />
+</div>
+<!-- Add more fields as needed -->
+<!-- End Association Specific Form -->
+
+
+@code {
+    // defined FuelWebUi.Pages.Crud.FormModels.AssociationFormModel
+    [Parameter] public AssociationFormModel FormModel { get; set; } = new();
+}

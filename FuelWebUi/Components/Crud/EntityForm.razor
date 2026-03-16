@@ -1,0 +1,49 @@
+
+<!--    
+    Entity Form 
+    Stays it view when scrolling
+    Child Content = Specific Fields for Entity
+    Find Child Content Forms in Forms Folder
+ -->
+<div class="col-lg-4" id="edit-form" style="position:sticky;top:20px;height:fit-content;">
+    <div class="card">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="card-title mb-0">@Title</h5>
+                <button type="button" class="btn-close" @onclick="OnCancel"></button>
+            </div>
+            <EditForm Model="FormModel" OnValidSubmit="OnValidSubmit">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+                @ChildContent
+                <div class="d-flex gap-2">
+                    <button class="btn btn-primary" type="submit" disabled="@IsSaving">
+                        @(IsSaving ? "Saving..." : IsEditMode ? "Update" : "Add")
+                    </button>
+                    <button class="btn btn-secondary" type="button" @onclick="OnCancel">
+                        Cancel
+                    </button>
+                    @if (IsEditMode)
+                    {
+                        <button class="btn btn-danger ms-auto" type="button" @onclick="OnDelete">
+                            Delete
+                        </button>
+                    }
+                </div>
+            </EditForm>
+        </div>
+    </div>
+</div>
+<!-- End Entity Form -->
+
+@code {
+    @typeparam TFormModel
+    [Parameter] public TFormModel? FormModel { get; set; }
+    [Parameter] public bool IsEditMode { get; set; }
+    [Parameter] public bool IsSaving { get; set; }
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public EventCallback OnValidSubmit { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public EventCallback OnDelete { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

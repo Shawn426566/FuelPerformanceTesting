@@ -1,0 +1,68 @@
+@inject FuelApiClient ApiClient
+
+<!-- Staff Member Specific Form for use as child to Entity Form -->
+<div class="mb-3">
+	<AlertMessage SuccessMessage="@_successMessage" ErrorMessage="@_errorMessage" />
+	<label class="form-label">First Name</label>
+	<InputText class="form-control" @bind-Value="FormModel.FirstName" />
+</div>
+<div class="mb-3">
+	<label class="form-label">Last Name</label>
+	<InputText class="form-control" @bind-Value="FormModel.LastName" />
+</div>
+<div class="mb-3">
+	<label class="form-label">Email</label>
+	<InputText class="form-control" @bind-Value="FormModel.Email" type="email" />
+</div>
+<div class="mb-3">
+	<label class="form-label">Role</label>
+	<InputSelect class="form-control" @bind-Value="FormModel.Role">
+		<option value="">Select Role</option>
+		@foreach (var role in Enum.GetValues(typeof(FuelWebUi.ApiClient.Models.StaffRole)))
+		{
+			<option value="@role">@role</option>
+		}
+	</InputSelect>
+</div>
+<div class="mb-3">
+	<label class="form-label">Team</label>
+	<InputSelect class="form-control" @bind-Value="FormModel.TeamID" disabled="@(_teams.Count == 0)">
+		<option value="">Select Team</option>
+		@foreach (var team in _teams)
+		{
+			<option value="@team.TeamId">@team.Name</option>
+		}
+	</InputSelect>
+</div>
+<!-- End Staff Member Specific Form -->
+
+@code {
+	// defined FuelWebUi.Pages.Crud.FormModels.StaffMemberFormModel
+	[Parameter] public StaffMemberFormModel FormModel { get; set; } = new();
+	protected List<TeamListDto> _teams { get; set; } = new();
+
+	protected readonly string? _successMessage = null;
+	protected string? _errorMessage { get; set; } = null;
+
+	protected override async Task OnInitializedAsync()
+	{
+		try
+		{
+			_errorMessage = null;
+			var teamResponse = await ApiClient.Api.Teams.GetAsync((config =>
+			{
+				config.QueryParameters.SortBy = "Name";
+				config.QueryParameters.SortDir = "asc";
+				config.QueryParameters.Page = 0;
+				config.QueryParameters.PageSize = 1000;
+			}));
+			_teams = teamResponse?.Items ?? new List<TeamListDto>();
+		}
+		catch (Exception ex)
+		{
+			_teams = new List<TeamListDto>();
+			_errorMessage = $"Failed to load teams: {ex.Message}";
+		}
+	}
+}
+

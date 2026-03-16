@@ -1,0 +1,19 @@
+<!-- Alert Messages for CRUD operations -->
+@if (!string.IsNullOrWhiteSpace(SuccessMessage))
+{
+    <div class="alert alert-success">@SuccessMessage</div>
+}
+
+@if (!string.IsNullOrWhiteSpace(ErrorMessage))
+{
+    <div class="alert alert-danger">@ErrorMessage</div>
+}
+<!-- End Alert Messages -->
+
+@code {
+    [Parameter]
+    public string? SuccessMessage { get; set; }
+    
+    [Parameter]
+    public string? ErrorMessage { get; set; }
+}

@@ -1,0 +1,8 @@
+<!-- Simple component to display the page title for all CRUD pages -->
+<h1>@PageTitle</h1>
+<!-- End Title Component -->
+
+@code {
+    [Parameter]
+    public string PageTitle { get; set; } = string.Empty;
+}
