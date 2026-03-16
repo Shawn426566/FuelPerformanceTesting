@@ -179,3 +179,6 @@ PublishProfiles/
 .env.development
 .env.test
 .env.production
+
+# EF Core Migrations
+FuelApp/Migrations/
