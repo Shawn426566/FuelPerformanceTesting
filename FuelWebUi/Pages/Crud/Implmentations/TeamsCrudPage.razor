@@ -1,0 +1,27 @@
+@page "/crud/teams"
+@inherits TemplateCrudPage<TeamListDto, TeamFormModel, Team>
+
+<EntityPage TDto="TeamListDto" TFormModel="TeamFormModel"
+    PageTitle="Teams"
+    EntityName="Team"
+    SuccessMessage="@_successMessage"
+    ErrorMessage="@_errorMessage"
+    Items="@_items"
+    IsLoading="@_isLoading"
+    CurrentPage="@_currentPage"
+    PageSize="@_pageSize"
+    TotalCount="@(_totalCount ?? 0)"
+    TotalPages="@_totalPages"
+    ShowForm="@_showForm"
+    FormModel="@_formModel"
+    IsEditMode="@_isEditMode"
+    IsSaving="@_isSaving"
+    OnAddClicked="ShowAddForm"
+    OnRowClick="ShowEditForm"
+    OnValidSubmit="OnValidSubmitAsync"
+    OnCancel="HideForm"
+    OnDelete="DeleteItemAsync"
+    NextPage="NextPageAsync"
+    PreviousPage="PreviousPageAsync">
+    <TeamForm FormModel="@_formModel" />
+</EntityPage>

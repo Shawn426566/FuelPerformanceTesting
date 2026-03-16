@@ -1,0 +1,28 @@
+@page "/crud/associations"
+@inherits TemplateCrudPage<AssociationListDto, AssociationFormModel, Association>
+
+<EntityPage TDto="AssociationListDto" TFormModel="AssociationFormModel"
+    PageTitle="Associations"
+    EntityName="Association"
+    SuccessMessage="@_successMessage"
+    ErrorMessage="@_errorMessage"
+    Items="@_items"
+    IsLoading="@_isLoading"
+    CurrentPage="@_currentPage"
+    PageSize="@_pageSize"
+    TotalCount="@(_totalCount ?? 0)"
+    TotalPages="@_totalPages"
+    ShowForm="@_showForm"
+    FormModel="@_formModel"
+    IsEditMode="@_isEditMode"
+    IsSaving="@_isSaving"
+    OnAddClicked="ShowAddForm"
+    OnRowClick="ShowEditForm"
+    OnValidSubmit="OnValidSubmitAsync"
+    OnCancel="HideForm"
+    OnDelete="DeleteItemAsync"
+    NextPage="NextPageAsync"
+    PreviousPage="PreviousPageAsync">
+    <AssociationForm FormModel="@_formModel" />
+</EntityPage>
+
