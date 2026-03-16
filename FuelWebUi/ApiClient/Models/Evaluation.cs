@@ -2,7 +2,6 @@
 #pragma warning disable CS0618
 using Microsoft.Kiota.Abstractions.Extensions;
 using Microsoft.Kiota.Abstractions.Serialization;
-using Microsoft.Kiota.Abstractions;
 using System.Collections.Generic;
 using System.IO;
 using System;
@@ -15,7 +14,7 @@ namespace FuelWebUi.ApiClient.Models
     public partial class Evaluation : IParsable
     {
         /// <summary>Gets or sets the date when the evaluation was conducted.</summary>
-        public Date? Date { get; set; }
+        public DateTimeOffset? Date { get; set; }
         /// <summary>Gets or sets the unique identifier for the evaluation.</summary>
         public int? EvaluationId { get; set; }
         /// <summary>Gets or sets the identifier of the player being evaluated.</summary>
@@ -48,7 +47,7 @@ namespace FuelWebUi.ApiClient.Models
         {
             return new Dictionary<string, Action<IParseNode>>
             {
-                { "date", n => { Date = n.GetDateValue(); } },
+                { "date", n => { Date = n.GetDateTimeOffsetValue(); } },
                 { "evaluationId", n => { EvaluationId = n.GetIntValue(); } },
                 { "playerId", n => { PlayerId = n.GetIntValue(); } },
                 { "staffMemberId", n => { StaffMemberId = n.GetIntValue(); } },
@@ -62,7 +61,7 @@ namespace FuelWebUi.ApiClient.Models
         public virtual void Serialize(ISerializationWriter writer)
         {
             if(ReferenceEquals(writer, null)) throw new ArgumentNullException(nameof(writer));
-            writer.WriteDateValue("date", Date);
+            writer.WriteDateTimeOffsetValue("date", Date);
             writer.WriteIntValue("evaluationId", EvaluationId);
             writer.WriteIntValue("playerId", PlayerId);
             writer.WriteIntValue("staffMemberId", StaffMemberId);
