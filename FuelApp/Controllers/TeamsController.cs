@@ -10,7 +10,7 @@ namespace FuelApp.Controllers
     /// Handles CRUD operations for teams.
     /// </summary>
     /// <remarks>
-    /// Base route: <c>api/Teams</c>.
+    /// Base route: <c>api/teams</c>.
     /// Supports listing, retrieving by ID, creating, updating, and deleting team records.
     /// </remarks>
     [ApiController]
