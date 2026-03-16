@@ -30,6 +30,7 @@ using FuelApp.Repositories.Interfaces;
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.EntityFrameworkCore;
+using MySql.EntityFrameworkCore.Extensions;
 using Swashbuckle.AspNetCore; // swagger generation
 using System.Text.RegularExpressions;
 using System.Text.Json.Serialization;
@@ -37,9 +38,11 @@ using Microsoft.AspNetCore.Hosting.Server.Features;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure Entity Framework to use SQL Server with the connection string from appsettings.json
+// Configure Entity Framework to use My SQL with the connection string from appsettings.json
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string not found.");
 builder.Services.AddDbContext<FuelAppContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))); 
+    options.UseMySQL(connectionString));
+
 
 // Add API explorer for generating OpenAPI documentation
 builder.Services.AddEndpointsApiExplorer(); 
