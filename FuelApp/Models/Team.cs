@@ -16,6 +16,7 @@ namespace FuelApp.Models
         /// </summary>
         [Required]
         [StringLength(100)]
+        [RegularExpression(@"^[a-zA-Z0-9 .,'-]+$", ErrorMessage = "Invalid characters in name.")]
         public required string Name { get; set; }
         /// <summary>
         /// Gets or sets the association identifier for the team.

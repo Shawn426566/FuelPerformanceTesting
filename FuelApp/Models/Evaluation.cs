@@ -26,14 +26,15 @@ namespace FuelApp.Models
         /// <value>A string containing the evaluation summary.</value>
         [Required]
         [StringLength(2000)]
+        [RegularExpression(@"^[a-zA-Z0-9 .,'-]+$", ErrorMessage = "Invalid characters in summary.")]
         public required string Summary { get; set; }
 
         /// <summary>
         /// Gets or sets the date when the evaluation was conducted.
         /// </summary>
         /// <value>A DateTime object representing the evaluation date.</value>
-        [DataType(DataType.Date)]
         [Required]
+        [DataType(DataType.DateTime)]
         public DateTime Date { get; set; }
 
         /// <summary>

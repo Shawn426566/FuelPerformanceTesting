@@ -18,6 +18,7 @@ namespace FuelApp.Models
         /// </summary>
         [Required]
         [StringLength(50)]
+        [RegularExpression(@"^[a-zA-Z0-9 .,'-]+$", ErrorMessage = "Invalid characters in name.")]
         public required string FirstName { get; set; }
 
         /// <summary>
@@ -25,6 +26,7 @@ namespace FuelApp.Models
         /// </summary>
         [Required]
         [StringLength(50)]
+        [RegularExpression(@"^[a-zA-Z0-9 .,'-]+$", ErrorMessage = "Invalid characters in name.")]
         public required string LastName { get; set; }
 
         /// <summary>
@@ -36,6 +38,10 @@ namespace FuelApp.Models
         /// <summary>
         /// Gets or sets the staff member's email address.
         /// </summary>
+        [StringLength(100)]
+        [EmailAddress(ErrorMessage = "Invalid email address.")]
+        [RegularExpression(@"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", ErrorMessage = "Invalid email address.")]
+
         public string? Email { get; set; }
 
         /// <summary>
