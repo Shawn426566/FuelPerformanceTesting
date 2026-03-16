@@ -10,16 +10,16 @@ namespace FuelApp.Controllers
     /// Handles CRUD operations for associations.
     /// </summary>
     /// <remarks>
-    /// Base route: <c>api/Association</c>.
+    /// Base route: <c>api/Associations</c>.
     /// Supports listing, retrieving by ID, creating, updating, and deleting association records.
     /// </remarks>
     [ApiController]
     [Route("api/[controller]")]
-    public class AssociationController : ControllerBase
+    public class AssociationsController : ControllerBase
     {
         private readonly IAssociationRepository _repo;
 
-        public AssociationController(IAssociationRepository repo)
+        public AssociationsController(IAssociationRepository repo)
         {
             _repo = repo;
         }
@@ -67,7 +67,6 @@ namespace FuelApp.Controllers
             _repo.Add(association);
             await _repo.SaveChangesAsync();
             return CreatedAtAction(nameof(GetById), new { id = association.AssociationID }, association);
-
         }
 
         /// <summary>
