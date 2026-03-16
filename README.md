@@ -26,14 +26,14 @@ A full-stack application for managing player evaluations.
 -	Implemented comprehensive input validation and sanitation on both client and server sides, including regular expressions and email validation.
 -	Built the frontend using reusable Razor components and API client generated via Kiota.
 -	Adopted server-side pagination and sorting to ensure scalability and optimal performance.
--	Attempted to learn and implement established best practices including dependency injection, separation of concerns, and per-request DbContext usage to ensure concurrency safety.
+- Implemented established best practices including dependency injection, separation of concerns, and per-request DbContext usage to ensure concurrency safety.
 -	Configured Cross-Origin Resource Sharing (CORS) and input encoding to mitigate XSS risks and secure API access.
 -	Integrated OpenAPI/Swagger documentation to support API discoverability and maintainability.
 
 
 ### What Still Needs To Be Done
 
-- Complete frontend functionality for evaluators to work offline and upload data later;
+- Complete frontend functionality for evaluators to work offline and upload data later.
 -	Produce video demonstrations to clearly showcase my actual understanding of the concepts applied.
 -	Implement a SignalR server hub to enable real-time updates and notifications.
 -	Introduce efficient state management to reduce redundant API calls and improve frontend responsiveness.
