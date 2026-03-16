@@ -182,7 +182,7 @@ try {
     
     foreach ($assocName in $Associations) {
         $body = @{ name = $assocName } | ConvertTo-Json
-        $assoc = Invoke-ApiCall -Method "POST" -Endpoint "/api/association" -Body $body
+        $assoc = Invoke-ApiCall -Method "POST" -Endpoint "/api/associations" -Body $body
         $createdAssociations += $assoc
         Write-Host "  Created association: $assocName (ID: $($assoc.associationID))" -ForegroundColor Green
     }

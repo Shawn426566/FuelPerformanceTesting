@@ -113,7 +113,7 @@ try {
     $allAssocsList = @()
     $page = 1
     do {
-        $response = Invoke-ApiCall -Method "GET" -Endpoint "/api/association?page=$page&pageSize=$pageSize"
+        $response = Invoke-ApiCall -Method "GET" -Endpoint "/api/associations?page=$page&pageSize=$pageSize"
         if ($response.items) {
             $allAssocsList += $response.items
             $page++
@@ -124,7 +124,7 @@ try {
     foreach ($assoc in $allAssocsList) {
         if ($Associations -contains $assoc.name) {
             Write-Host "Deleting association: $($assoc.name) (ID: $($assoc.associationID))" -ForegroundColor Red
-            Invoke-ApiCall -Method "DELETE" -Endpoint "/api/association/$($assoc.associationID)"
+            Invoke-ApiCall -Method "DELETE" -Endpoint "/api/associations/$($assoc.associationID)"
         }
     }
     
