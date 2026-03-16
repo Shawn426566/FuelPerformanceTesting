@@ -31,64 +31,8 @@ namespace FuelApp.Repositories.Implementations
             string? sortDir = null,
             int page = 1,
             int pageSize = 50)
-
-/*          This is a Copilot-generated. It's not optimal because it obtains
-            the total count by executing the same complex query. 
-
-            SELECT COUNT(*) AS AssociationCount
-            FROM dbo.Associations;
-
-            is all that is needed. 
-            
         {
             page = Math.Max(1, page);
-            pageSize = Math.Clamp(pageSize, 1, 200);
-
-            var query = _context.Associations
-                .AsNoTracking()
-                .Select(a => new AssociationListDto
-                {
-                    AssociationId = a.AssociationID,
-                    Name = a.Name,
-                    TeamCount = a.Teams.Count
-                })
-                .AsQueryable();
-
-            bool isDescending = sortDir?.ToLowerInvariant() == "desc";
-            query = (sortBy ?? "id").ToLowerInvariant() switch
-            {
-                "name" => isDescending
-                    ? query.OrderByDescending(a => a.Name).ThenByDescending(a => a.AssociationId)
-                    : query.OrderBy(a => a.Name).ThenBy(a => a.AssociationId),
-                "teamcount" => isDescending
-                    ? query.OrderByDescending(a => a.TeamCount).ThenByDescending(a => a.AssociationId)
-                    : query.OrderBy(a => a.TeamCount).ThenBy(a => a.AssociationId),
-                _ => isDescending
-                    ? query.OrderByDescending(a => a.AssociationId)
-                    : query.OrderBy(a => a.AssociationId)
-            };
-
-            var totalCount = await query.CountAsync();
-            var items = await query
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync();
-
-            return new PagedResultDto<AssociationListDto>
-            {
-                Items = items,
-                Page = page,
-                PageSize = pageSize,
-                TotalCount = totalCount
-            };
-        }
-*/
-        // Optimized version: simple count on base table, sequential queries
-        // learned that you can't run parallel queries on the same DbContext instance, so we have to run them sequentially 
-        // or create a new DbContext instance for the count query if we wanted to run in parallel.
-        {
-            page = Math.Max(1, page);
-            pageSize = Math.Clamp(pageSize, 1, 200);
             
             // Simple count on base entity set (no projection, no sorting)
             // Generates: SELECT COUNT(*) FROM Associations
@@ -96,6 +40,7 @@ namespace FuelApp.Repositories.Implementations
             
             // Main query for paginated items with sorting
             var query = _context.Associations
+                .Include(a => a.Teams)
                 .AsNoTracking()
                 .Select(a => new AssociationListDto
                 {

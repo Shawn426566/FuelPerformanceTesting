@@ -33,28 +33,23 @@ namespace FuelApp.Repositories.Implementations
             int pageSize = 50)
         {
             page = Math.Max(1, page);
-            pageSize = Math.Clamp(pageSize, 1, 200);
 
             // Simple count on base entity (no joins, no projection)
             var totalCount = await _context.Teams.CountAsync();
 
             var query = _context.Teams
+                .Include(t => t.Association)
+                .Include(t => t.Players)
                 .AsNoTracking()
-                .Join(
-                    _context.Associations.AsNoTracking(),
-                    t => t.AssociationID,
-                    a => a.AssociationID,
-                    (t, a) => new { Team = t, Association = a }
-                )
-                .Select(x => new TeamListDto
+                .Select(t => new TeamListDto
                 {
-                    TeamId = x.Team.TeamID,
-                    Name = x.Team.Name,
-                    AssociationId = x.Association.AssociationID,
-                    AssociationName = x.Association.Name,
-                    PlayerCount = x.Team.Players.Count
+                    TeamId = t.TeamID,
+                    Name = t.Name,
+                    AssociationId = t.AssociationID ?? 0,
+                    AssociationName = t.Association != null ? t.Association.Name : null,
+                    PlayerCount = t.Players.Count
                 })
-                .OrderBy(t => t.TeamId);
+                .AsQueryable();
 
             bool isDescending = sortDir?.ToLowerInvariant() == "desc";
             var sortedQuery = (sortBy ?? "id").ToLowerInvariant() switch

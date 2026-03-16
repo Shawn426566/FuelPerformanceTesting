@@ -33,31 +33,26 @@ namespace FuelApp.Repositories.Implementations
             int pageSize = 50)
         {
             page = Math.Max(1, page);
-            pageSize = Math.Clamp(pageSize, 1, 200);
 
             // Simple count on base entity (no joins, no projection)
             var totalCount = await _context.StaffMembers.CountAsync();
 
             var query = _context.StaffMembers
                 .AsNoTracking()
-                .GroupJoin(
-                    _context.Teams.AsNoTracking(),
-                    s => s.TeamID,
-                    t => t.TeamID,
-                    (s, teams) => new { Staff = s, Team = teams.FirstOrDefault() }
-                )
-                .Select(x => new StaffMemberListDto
+                .Include(s => s.Team)
+                .Include(s => s.Evaluations)
+                .Select(s => new StaffMemberListDto
                 {
-                    StaffMemberId = x.Staff.StaffMemberID,
-                    FirstName = x.Staff.FirstName,
-                    LastName = x.Staff.LastName,
-                    Role = x.Staff.Role.ToString(),
-                    Email = x.Staff.Email,
-                    TeamId = x.Staff.TeamID,
-                    TeamName = x.Team != null ? x.Team.Name : null,
-                    EvaluationCount = x.Staff.Evaluations.Count
+                    StaffMemberId = s.StaffMemberID,
+                    FirstName = s.FirstName,
+                    LastName = s.LastName,
+                    Role = s.Role.ToString(),
+                    Email = s.Email ?? string.Empty,
+                    TeamId = s.TeamID ?? null,
+                    TeamName = s.Team != null ? s.Team.Name : string.Empty,
+                    EvaluationCount = s.Evaluations.Count
                 })
-                .OrderBy(s => s.StaffMemberId);
+                .AsQueryable();
 
             bool isDescending = sortDir?.ToLowerInvariant() == "desc";
             var sortedQuery = (sortBy ?? "lastname").ToLowerInvariant() switch

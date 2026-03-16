@@ -33,29 +33,25 @@ namespace FuelApp.Repositories.Implementations
             int pageSize = 50)
         {
             page = Math.Max(1, page);
-            pageSize = Math.Clamp(pageSize, 1, 200);
 
             // Simple count on base entity (no joins, no projection)
             var totalCount = await _context.Evaluations.CountAsync();
 
-            var query = from e in _context.Evaluations.AsNoTracking()
-                        join p in _context.Players.AsNoTracking()
-                            on e.PlayerId equals p.PlayerID
-                        join s in _context.StaffMembers.AsNoTracking()
-                            on e.StaffMemberId equals s.StaffMemberID into staffJoin
-                        from staff in staffJoin.DefaultIfEmpty()
-                        select new EvaluationListDto
-                        {
-                            EvaluationId = e.EvaluationId,
-                            Date = e.Date,
-                            Summary = e.Summary,
-                            PlayerId = e.PlayerId,
-                            PlayerName = p.FirstName + " " + p.LastName,
-                            StaffMemberId = e.StaffMemberId,
-                            StaffMemberName = staff != null
-                                ? staff.FirstName + " " + staff.LastName
-                                : null
-                        };
+            var query = _context.Evaluations
+                .Include(e => e.Player)
+                .Include(e => e.StaffMember)
+                .AsNoTracking()
+                .Select(e => new EvaluationListDto
+                {
+                    EvaluationId = e.EvaluationId,
+                    Date = e.Date,
+                    Summary = e.Summary,
+                    PlayerId = e.PlayerId,
+                    PlayerName = e.Player != null ? e.Player.FirstName + " " + e.Player.LastName : string.Empty,
+                    StaffMemberId = e.StaffMemberId,
+                    StaffMemberName = e.StaffMember != null ? e.StaffMember.FirstName + " " + e.StaffMember.LastName : string.Empty
+                })
+                .AsQueryable();
 
             bool isDescending = sortDir?.ToLowerInvariant() == "desc";
             var sortedQuery = (sortBy ?? "date").ToLowerInvariant() switch

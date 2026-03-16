@@ -33,37 +33,27 @@ namespace FuelApp.Repositories.Implementations
             int pageSize = 50)
         {
             page = Math.Max(1, page);
-            pageSize = Math.Clamp(pageSize, 1, 200);
 
             // Simple count on base entity (no joins, no projection)
             var totalCount = await _context.Players.CountAsync();
 
             var query = _context.Players
                 .AsNoTracking()
-                .Join(
-                    _context.Teams.AsNoTracking(),
-                    p => p.TeamID,
-                    t => t.TeamID,
-                    (p, t) => new { Player = p, Team = t }
-                )
-                .LeftJoin(
-                    _context.Associations.AsNoTracking(),
-                    x => x.Player.AssociationID,
-                    a => a.AssociationID,
-                    (x, a) => new { x.Player, x.Team, Association = a }
-                )
-                .Select(x => new PlayerListDto
+                .Include(p => p.Team)
+                .Include(p => p.Association)
+                .Select(p => new PlayerListDto
                 {
-                    PlayerId = x.Player.PlayerID,
-                    FirstName = x.Player.FirstName,
-                    LastName = x.Player.LastName,
-                    TeamId = x.Player.TeamID,
-                    TeamName = x.Team != null ? x.Team.Name : null,
-                    AssociationId = x.Player.AssociationID,
-                    AssociationName = x.Association != null ? x.Association.Name : null,
-                    Position = x.Player.Position != null ? x.Player.Position.ToString() : null,
-                    JerseyNumber = x.Player.JerseyNumber
-                });
+                    PlayerId = p.PlayerID,
+                    FirstName = p.FirstName,
+                    LastName = p.LastName,
+                    TeamId = p.TeamID ?? null,
+                    TeamName = p.Team != null ? p.Team.Name : string.Empty,
+                    AssociationId = p.AssociationID ?? null,
+                    AssociationName = p.Association != null ? p.Association.Name : string.Empty,
+                    Position = p.Position.ToString(),
+                    JerseyNumber = p.JerseyNumber,
+                })
+                .AsQueryable();
 
             bool isDescending = sortDir?.ToLowerInvariant() == "desc";
             var sortedQuery = (sortBy ?? "lastname").ToLowerInvariant() switch
