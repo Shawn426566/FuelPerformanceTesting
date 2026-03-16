@@ -17,40 +17,30 @@ A full-stack application for managing player evaluations.
 - Built a full-stack .NET CRUD application:
   - `FuelApp` (ASP.NET Core Web API)
   - `FuelWebUi` (Blazor WebAssembly frontend)
-- Implemented end-to-end CRUD workflows for all core entities:
-  - Associations;
-  - Teams;
-  - Players;
-  - Staff Members;
-  - Evaluations.
-- Used Entity Framework Core to map database records to C# domain models and support data access.
-- Exposed an OpenAPI/Swagger API contract for documentation and client generation.
-- Generated a typed frontend API client with Kiota.
-- Added API middleware for cross-cutting concerns:
-  - Built-in HTTP logging for request and response debugging;
-  - Global exception handling;
-  - Custom URL and body sanitization middleware (prototype-level; consider built-in or third-party alternatives for production).
-- Built a functional Blazor frontend that consumes CRUD API endpoints.
-- Implemented performance-focused optimizations:
-  - Lightweight DTO projections to reduce payload size and unnecessary query data;
-  - Server-side pagination to improve API response time and frontend rendering performance;
-  - Database indexes on fields used for sorting and relationship lookups.
-- Leveraged GitHub Copilot; now reviewing for mistakes. Example:
-  - See file FuelPerformanceTesting\FuelApp\Repositories\Implementations\AssociationRepository.cs line 35;
-  - Commented out Copilot version and showed what I observed to make it better.
-
+-	Developed a full-stack .NET solution utilizing an ASP.NET Core backend and a Blazor WebAssembly frontend.
+-	Implemented Entity Framework Core (EF Core) as the ORM, enabling code-first migrations, LINQ-based querying, and strong typing.
+-	Designed normalized relational data models covering associations, teams, players, staff members, and evaluations.
+-	Applied the repository pattern to ensure clean, maintainable, and testable data access.
+-	Leveraged advanced EF Core capabilities including navigation properties, eager loading (Include), AsNoTracking for read-only queries, and server-side pagination.
+-	Utilized Data Transfer Objects (DTOs) to improve API security, flexibility, and performance.
+-	Implemented comprehensive input validation and sanitation on both client and server sides, including regular expressions and email validation.
+-	Built the frontend using reusable Razor components and API client generated via Kiota.
+-	Adopted server-side pagination and sorting to ensure scalability and optimal performance.
+-	Attempted to learn and implement established best practices including dependency injection, separation of concerns, and per-request DbContext usage to ensure concurrency safety.
+-	Configured Cross-Origin Resource Sharing (CORS) and input encoding to mitigate XSS risks and secure API access.
+-	Integrated OpenAPI/Swagger documentation to support API discoverability and maintainability.
 
 
 ### What Still Needs To Be Done
 
 - Complete frontend functionality for evaluators to work offline and upload data later;
-- Implement state management in the frontend;
-- Add authentication and authorization with role-based access;
-- Direct users to the appropriate frontend page based on their role;
-- Add testing and address concurrency issues;
-- Add more backend endpoints to support future frontend components.
-- A lot more!
-
+-	Produce video demonstrations to clearly showcase my actual understanding of the concepts applied.
+-	Implement a SignalR server hub to enable real-time updates and notifications.
+-	Introduce efficient state management to reduce redundant API calls and improve frontend responsiveness.
+-	Add Role-Based Access Control (RBAC) to enforce secure, permission-driven access.
+-	Enhance the frontend with role-aware interfaces and integrated analytics, delivering actionable insights for coaches, players, and parents.
+-	Deploy the application to Microsoft Azure for cloud hosting and scalability.
+-	Establish CI/CD pipelines to support automated testing, continuous integration, and streamlined deployments.
 
 
 ## Architecture Diagram
@@ -218,6 +208,11 @@ Once the backend is running, you can seed the database with test data using the 
 ## Development Workflow
 
 ### Common Commands
+
+#### Kiota Gen
+```bash
+kiota generate --language CSharp --openapi http://localhost:5114/swagger/v1/swagger.json --namespace-name FuelWebUi.ApiClient --class-name FuelApiClient --output ApiClient
+```
 
 #### Build
 ```bash
