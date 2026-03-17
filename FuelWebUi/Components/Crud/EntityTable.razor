@@ -52,7 +52,7 @@ else
                         if (prop.Name.ToLower().Contains("date"))
                         {
                             string? strValue = value?.ToString();
-                            <td>@(strValue != null ? strValue.Substring(0, Math.Min(10, strValue.Length)) : "")</td>
+                            <td>@(strValue != null ? (strValue.Contains(" ") ? strValue.Substring(0, strValue.IndexOf(" ")) : strValue) : "")</td>
                         }
                         else if (value != null)
                         {
