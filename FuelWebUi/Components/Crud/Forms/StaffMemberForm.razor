@@ -38,9 +38,10 @@
 
 @code {
 	// defined FuelWebUi.Pages.Crud.FormModels.StaffMemberFormModel
-	[Parameter] public StaffMemberFormModel FormModel { get; set; } = new();
+	[Parameter] 
+	public StaffMemberFormModel FormModel { get; set; } = new();
+	
 	protected List<TeamListDto> _teams { get; set; } = new();
-
 	protected readonly string? _successMessage = null;
 	protected string? _errorMessage { get; set; } = null;
 

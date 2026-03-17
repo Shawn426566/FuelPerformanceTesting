@@ -35,53 +35,49 @@
 
 @code {
     // defined FuelWebUi.Pages.Crud.FormModels.EvaluationFormModel
-	[Parameter] public EvaluationFormModel FormModel { get; set; } = new();
-	protected List<StaffMemberListDto> _staffMembers { get; set; } = new();
-	protected List<PlayerListDto> _players { get; set; } = new();
-
+	[Parameter] 
+    public EvaluationFormModel FormModel { get; set; } = new();
 	
+    protected List<StaffMemberListDto> _staffMembers { get; set; } = new();
+	protected List<PlayerListDto> _players { get; set; } = new();
 	protected readonly string? _successMessage = null;
 	protected string? _errorMessage { get; set; } = null; 
 
 	// Load Staff members and players for dropdowns
     protected override async Task OnInitializedAsync()
     {
+        StaffMemberListDtoPagedResultDto? staffResult = null;
+        PlayerListDtoPagedResultDto? playerResult = null;
         try
         {
-			_errorMessage = null;
-            var response = await ApiClient.Api.StaffMembers.GetAsync((config =>
+            _errorMessage = null;
+            var staffTask = ApiClient.Api.StaffMembers.GetAsync((config =>
             {
                 config.QueryParameters.SortBy = "LastName";
                 config.QueryParameters.SortDir = "asc";
                 config.QueryParameters.Page = 0;
                 config.QueryParameters.PageSize = 1000;
             }));
-            _staffMembers = response?.Items ?? new List<StaffMemberListDto>();
-        }
-        catch (Exception ex)
-        {
-            _staffMembers = new List<StaffMemberListDto>();
-            _errorMessage = $"Failed to load staff members: {ex.Message}";
-        }
-
-		        try
-        {
-			_errorMessage = null;
-            var response = await ApiClient.Api.Players.GetAsync((config =>
+            var playerTask = ApiClient.Api.Players.GetAsync((config =>
             {
                 config.QueryParameters.SortBy = "LastName";
                 config.QueryParameters.SortDir = "asc";
                 config.QueryParameters.Page = 0;
                 config.QueryParameters.PageSize = 1000;
             }));
-            _players = response?.Items ?? new List<PlayerListDto>();
+            await Task.WhenAll(staffTask, playerTask);
+            staffResult = await staffTask;
+            playerResult = await playerTask;
         }
         catch (Exception ex)
         {
-            _players = new List<PlayerListDto>();
-            _errorMessage = $"Failed to load players: {ex.Message}";
+            _errorMessage = $"Failed to load: {ex.Message}";
         }
-
+        finally
+        {
+            _staffMembers = staffResult?.Items ?? new List<StaffMemberListDto>();
+            _players = playerResult?.Items ?? new List<PlayerListDto>();
+        }
     }
 }
 

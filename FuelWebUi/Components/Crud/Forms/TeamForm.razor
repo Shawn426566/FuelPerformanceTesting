@@ -20,9 +20,10 @@
 
 @code {
     // defined FuelWebUi.Pages.Crud.FormModels.TeamFormModel
-	[Parameter] public TeamFormModel FormModel { get; set; } = new();
-	protected List<AssociationListDto> _associations { get; set; } = new();
+	[Parameter] 
+    public TeamFormModel FormModel { get; set; } = new();
 	
+    protected List<AssociationListDto> _associations { get; set; } = new();
 	protected readonly string? _successMessage = null;
 	protected string? _errorMessage { get; set; } = null; 
 
