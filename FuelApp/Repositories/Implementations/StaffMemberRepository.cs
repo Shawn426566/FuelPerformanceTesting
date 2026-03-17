@@ -127,5 +127,25 @@ namespace FuelApp.Repositories.Implementations
         {
             return await _context.SaveChangesAsync();
         }
+
+        /// <summary>
+        /// Retrieves a set of staff member names sorted by last name then first name. 
+        /// </summary>
+        public async Task<List<StaffMemberNamesDto>> GetNamesAsync()
+        {
+            var names = await _context.StaffMembers
+                .AsNoTracking()
+                .OrderBy(s => s.LastName)
+                .ThenBy(s => s.FirstName)
+                .Select(s => new StaffMemberNamesDto
+                {
+                    StaffMemberId = s.StaffMemberID,
+                    FirstName = s.FirstName,
+                    LastName = s.LastName
+                })
+                .ToListAsync();
+
+            return names;
+        }
     }
 }

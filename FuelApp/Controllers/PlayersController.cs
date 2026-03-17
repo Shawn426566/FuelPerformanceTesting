@@ -100,5 +100,25 @@ namespace FuelApp.Controllers
             await _repo.SaveChangesAsync();
             return NoContent();
         }
+
+        /// <summary>
+        /// Retrieves a list of player names and IDs for dropdowns.
+        /// </summary>
+        [ProducesResponseType(typeof(List<PlayerNamesDto>), 200)]
+        [ProducesResponseType(typeof(string), 500)]
+        [HttpGet("names")]
+        public async Task<ActionResult<List<PlayerNamesDto>>> GetNames()
+        {
+            try
+            {
+                var result = await _repo.GetNamesAsync();
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                // Optionally log the exception here
+                return StatusCode(500, $"An error occurred: {ex.Message}");
+            }
+        }
     }
 }

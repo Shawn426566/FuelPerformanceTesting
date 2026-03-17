@@ -38,5 +38,10 @@ namespace FuelApp.Repositories.Interfaces
         /// Persists pending changes to the database.
         /// </summary>
         Task<int> SaveChangesAsync();
+
+        /// <summary>
+        /// List of all players with only their first and last names.
+        /// </summary>
+        Task<List<PlayerNamesDto>> GetNamesAsync();
     }
 }

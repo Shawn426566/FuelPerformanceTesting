@@ -134,5 +134,24 @@ namespace FuelApp.Repositories.Implementations
             return await _context.SaveChangesAsync();
         }
 
+        /// <summary>>
+        /// Retrieves a set of player names sorted by last name then first name. 
+        /// </summary>
+        public async Task<List<PlayerNamesDto>> GetNamesAsync()
+        {
+            var names = await _context.Players
+                .AsNoTracking()
+                .OrderBy(p => p.LastName)
+                .ThenBy(p => p.FirstName)
+                .Select(p => new PlayerNamesDto
+                {
+                    PlayerId = p.PlayerID,
+                    FirstName = p.FirstName,
+                    LastName = p.LastName
+                })
+                .ToListAsync();
+
+            return names;
+        }
     }
 }

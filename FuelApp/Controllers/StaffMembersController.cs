@@ -104,5 +104,25 @@ namespace FuelApp.Controllers
             await _repo.SaveChangesAsync();
             return NoContent();
         }
+
+        /// <summary>
+        /// Retrieves a list of all staff members with only their first and last names.
+        /// </summary>
+        [ProducesResponseType(typeof(List<StaffMemberNamesDto>), 200)]
+        [ProducesResponseType(typeof(string), 500)]
+        [HttpGet("names")]
+        public async Task<ActionResult<List<StaffMemberNamesDto>>> GetNames()
+        {
+            try
+            {
+                var result = await _repo.GetNamesAsync();
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                // Optionally log the exception here
+                return StatusCode(500, $"An error occurred: {ex.Message}");
+            }
+        }
     }
 }
